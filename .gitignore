@@ -90,3 +90,13 @@ apps/server/__pycache__/
 # Web build outputs
 apps/web/dist/
 apps/web/.env
+
+# Model files
+data/models/
+
+# Temporary files
+apps/server/static/temp/
+
+# Lock files (pnpm is used)
+package-lock.json
+pnpm-lock.yaml

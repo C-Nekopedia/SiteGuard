@@ -1,5 +1,7 @@
 # SiteGuard
 
+[中文](README.zh-CN.md) | [English](README.md)
+
 SiteGuard is a construction site safety monitoring system that uses computer vision to detect personal protective equipment (PPE) compliance. It provides real-time detection of safety gear (helmets, vests, gloves, boots, goggles) and alerts for non-compliance.
 
 ## Features
@@ -49,7 +51,7 @@ site-guard-monorepo/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/SiteGuard.git
+git clone https://github.com/C-Nekopedia/SiteGuard.git
 cd SiteGuard
 ```
 
