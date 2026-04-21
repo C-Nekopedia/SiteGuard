@@ -1,0 +1,10 @@
+虚拟环境：
+venv\Scripts\activate
+
+前端：
+cd "d:\CODE\SiteGuard\apps\web"
+npm run dev
+
+后端：
+cd "d:\CODE\SiteGuard\apps\server"
+python -m app.main

@@ -1,0 +1,26 @@
+# SiteGuard Python Dependencies
+# This file combines dependencies from apps/server and packages/ai-engine
+
+# FastAPI backend dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+aiofiles==23.2.1
+
+# AI Engine dependencies
+ultralytics>=8.4.0
+numpy>=1.24.3,<2
+opencv-python==4.8.1.78
+PyYAML>=6.0
+watchdog==3.0.0
+onnxruntime>=1.15.0
+
+# Shared dependencies (already listed above)
+# numpy and opencv-python are included in AI Engine section
+
+# Note: Some dependencies may have version conflicts.
+# If you encounter issues, consider using separate virtual environments
+# for the server and AI engine components.

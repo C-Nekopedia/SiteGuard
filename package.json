@@ -1,0 +1,19 @@
+{
+  "name": "site-guard-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^1.13.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

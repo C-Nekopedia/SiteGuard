@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/models:/app/data/models
+      - ./data/raw:/app/data/raw
+      - ./logs:/app/logs
+      - ./apps/server/exports:/app/exports
+      - ./apps/server/static:/app/static
+    environment:
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MODELS_DIR=/app/data/models
+      - DATA_DIR=/app/data/raw
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - siteguard-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - siteguard-network
+
+  # 模型训练服务（可选）
+  trainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    command: >
+      sh -c "python scripts/train.py train --model-size n --epochs 10 --device cpu"
+    volumes:
+      - ./data/models:/app/data/models
+      - ./data/raw:/app/data/raw
+      - ./scripts:/app/scripts
+    environment:
+      - MODELS_DIR=/app/data/models
+      - DATA_DIR=/app/data/raw
+    networks:
+      - siteguard-network
+    profiles:
+      - train
+
+networks:
+  siteguard-network:
+    driver: bridge
+
+volumes:
+  models-data:
+  raw-data:
+  logs:

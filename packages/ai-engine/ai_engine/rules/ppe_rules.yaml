@@ -1,0 +1,122 @@
+# Construction-PPE 风险规则配置
+# SiteGuard AI 规则引擎
+
+version: "1.0"
+description: "建筑工地PPE风险检测规则"
+
+rules:
+  # P0级风险：直接检测到的违规
+  - name: "missing_helmet"
+    condition: "person_detected and (class_id == 7)"
+    level: "high"
+    message: "未佩戴安全帽"
+    description: "检测到人员但未佩戴安全帽"
+    actions:
+      - "trigger_alert"
+      - "capture_snapshot"
+    notification:
+      sound: "alert_high"
+      color: "#E6A23C"
+
+  - name: "no_ppe_detected"
+    condition: "class_id == 5"
+    level: "critical"
+    message: "完全无防护，立即处理"
+    description: "检测到完全无防护人员"
+    actions:
+      - "trigger_alert"
+      - "capture_snapshot"
+      - "notify_supervisor"
+    notification:
+      sound: "alert_critical"
+      color: "#F56C6C"
+
+  # P1级风险：隐式判定
+  - name: "missing_vest"
+    condition: "person_detected and vest_bbox is None"
+    level: "medium"
+    message: "未穿反光衣"
+    description: "检测到人员但未穿反光衣"
+    actions:
+      - "trigger_warning"
+    notification:
+      sound: "alert_medium"
+      color: "#409EFF"
+
+  # P2级风险：细粒度PPE缺失
+  - name: "missing_gloves"
+    condition: "person_detected and gloves_bbox is None"
+    level: "low"
+    message: "未戴手套"
+    description: "检测到人员但未戴手套"
+    actions:
+      - "log_only"
+    notification:
+      sound: "alert_low"
+      color: "#909399"
+
+  - name: "missing_boots"
+    condition: "person_detected and boots_bbox is None"
+    level: "low"
+    message: "未穿安全鞋"
+    description: "检测到人员但未穿安全鞋"
+    actions:
+      - "log_only"
+    notification:
+      sound: "alert_low"
+      color: "#909399"
+
+  - name: "missing_goggles"
+    condition: "person_detected and goggles_bbox is None"
+    level: "low"
+    message: "未戴护目镜"
+    description: "检测到人员但未戴护目镜"
+    actions:
+      - "log_only"
+    notification:
+      sound: "alert_low"
+      color: "#909399"
+
+# 规则组配置
+rule_groups:
+  - name: "ppe_compliance"
+    description: "PPE合规性检查"
+    enabled: true
+    rules:
+      - "missing_helmet"
+      - "missing_vest"
+      - "missing_gloves"
+      - "missing_boots"
+      - "missing_goggles"
+
+  - name: "critical_safety"
+    description: "关键安全风险"
+    enabled: true
+    rules:
+      - "no_ppe_detected"
+      - "missing_helmet"
+
+# 阈值配置
+thresholds:
+  confidence: 0.5
+  iou_for_implicit: 0.5
+  min_person_size: 0.05  # 人员检测的最小相对尺寸
+
+# 行为配置
+actions:
+  trigger_alert:
+    type: "immediate"
+    channels: ["web", "log", "email"]
+
+  trigger_warning:
+    type: "delayed"
+    channels: ["web", "log"]
+
+  capture_snapshot:
+    enabled: true
+    quality: 85
+    save_path: "exports/alerts/"
+
+  notify_supervisor:
+    enabled: true
+    min_level: "critical"
