@@ -154,6 +154,23 @@ rules:
 
 The default model is YOLOv8/YOLOv26 fine-tuned on a construction PPE dataset. Place your model file at `data/models/yolo26_construction_ppe.pt` or update the `MODEL_PATH` environment variable.
 
+### Dataset
+
+The model is trained on the [Construction-PPE dataset](https://docs.ultralytics.com/datasets/detect/construction-ppe/) from Ultralytics. If you use this dataset in your research, please cite:
+
+```bibtex
+@dataset{Dalvi_Construction_PPE_Dataset_2025,
+    author = {Mrunmayee Dalvi and Niyati Singh and Sahil Bhingarde and Ketaki Chalke},
+    title = {Construction-PPE: Personal Protective Equipment Detection Dataset},
+    month = {January},
+    year = {2025},
+    version = {1.0.0},
+    license = {AGPL-3.0},
+    url = {https://docs.ultralytics.com/datasets/detect/construction-ppe/},
+    publisher = {Ultralytics}
+}
+```
+
 ## Development
 
 ### Monorepo Commands

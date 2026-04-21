@@ -154,6 +154,23 @@ rules:
 
 默认模型是基于建筑PPE数据集微调的YOLOv8/YOLOv26模型。将模型文件放在 `data/models/yolo26_construction_ppe.pt` 或更新 `MODEL_PATH` 环境变量。
 
+### 数据集
+
+模型使用Ultralytics的[Construction-PPE数据集](https://docs.ultralytics.com/datasets/detect/construction-ppe/)进行训练。如果在您的研究中使用此数据集，请引用：
+
+```bibtex
+@dataset{Dalvi_Construction_PPE_Dataset_2025,
+    author = {Mrunmayee Dalvi and Niyati Singh and Sahil Bhingarde and Ketaki Chalke},
+    title = {Construction-PPE: Personal Protective Equipment Detection Dataset},
+    month = {January},
+    year = {2025},
+    version = {1.0.0},
+    license = {AGPL-3.0},
+    url = {https://docs.ultralytics.com/datasets/detect/construction-ppe/},
+    publisher = {Ultralytics}
+}
+```
+
 ## 开发
 
 ### 单体仓库命令
