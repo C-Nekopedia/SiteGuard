@@ -11,7 +11,6 @@ SiteGuard is a construction site safety monitoring system that uses computer vis
 - **Web dashboard**: Vue.js frontend for uploading images, viewing detections, and managing rules
 - **REST API**: FastAPI backend for image processing and detection
 - **Modular monorepo**: Separated into apps (web, server) and packages (ai-engine, schema, utils, logger)
-- **Docker support**: Containerized deployment with Docker Compose
 
 ## Project Structure
 
@@ -35,8 +34,6 @@ site-guard-monorepo/
 │   └── utils/                  # Shared utilities
 ├── data/                       # Dataset and sample images
 │   └── raw/                    # Raw construction site images
-├── docker/                     # Docker configuration
-├── docker-compose.yml          # Docker Compose setup
 └── package.json                # Monorepo root (pnpm + turbo)
 ```
 
@@ -44,7 +41,6 @@ site-guard-monorepo/
 
 - Node.js 18+ and pnpm 8+
 - Python 3.10+
-- Docker and Docker Compose (optional)
 
 ## Quick Start
 
@@ -101,25 +97,13 @@ cd apps/web
 pnpm dev
 ```
 
-The web interface will be available at http://localhost:5173 and the API at http://localhost:8000.
-
-## Docker Deployment
-
-```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-```
-
-Access the web interface at http://localhost:80.
+The web interface will be available at http://localhost:3000 and the API at http://localhost:8000.
 
 ## Usage
 
 ### Via Web Interface
 
-1. Navigate to http://localhost:5173
+1. Navigate to http://localhost:3000
 2. Upload a construction site image
 3. View detection results and risk assessments
 4. Configure risk rules in the settings panel
