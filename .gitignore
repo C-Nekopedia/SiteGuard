@@ -57,8 +57,6 @@ data/external/
 # Training runs
 runs/
 
-# Docker
-docker-compose.override.yml
 
 # Environment variables
 .env
