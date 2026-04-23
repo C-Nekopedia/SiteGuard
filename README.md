@@ -4,6 +4,12 @@
 
 SiteGuard is a construction site safety monitoring system that uses computer vision to detect personal protective equipment (PPE) compliance. It provides real-time detection of safety gear (helmets, vests, gloves, boots, goggles) and alerts for non-compliance.
 
+## UI Preview
+
+![Frontend UI Preview](data/preview/Frontend_preview.png)
+
+*Detection interface: upload an image and the system automatically identifies PPE (helmets, vests, gloves, etc.) and marks risks.*
+
 ## Features
 
 - **Real-time PPE detection**: Detects helmets, safety vests, gloves, boots, and goggles using YOLOv26 models
