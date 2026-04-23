@@ -8,33 +8,60 @@ from datetime import datetime
 
 def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     """
-    设置日志记录器
+    设置系统日志记录器（控制台 + 文件）
+    文件写入 logs/system/YYYY-MM-DD.log
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # 避免重复添加handler
     if logger.handlers:
         return logger
 
-    # 格式化器
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # 控制台处理器
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # 文件处理器（按日期）
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
+    log_dir = Path("logs") / "system"
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = log_dir / f"siteguard_{datetime.now().strftime('%Y%m%d')}.log"
+    log_file = log_dir / f"{datetime.now().strftime('%Y-%m-%d')}.log"
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
     return logger
+
+
+def setup_file_logger(name: str, subdir: str) -> logging.Logger:
+    """设置文件日志记录器，写入 logs/{subdir}/YYYY-MM-DD.log（仅文件）"""
+    log_dir = Path("logs") / subdir
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    log_file = log_dir / f"{datetime.now().strftime('%Y-%m-%d')}.log"
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    if logger.handlers:
+        return logger
+
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    handler = logging.FileHandler(log_file, encoding='utf-8')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
+
+
+# 向后兼容别名
+setup_detection_logger = lambda: setup_file_logger("detection", "detection")
+setup_risk_logger = lambda: setup_file_logger("risk", "alerts")

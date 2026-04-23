@@ -1,43 +1,128 @@
 """
 检测服务 - 处理图片、视频和摄像头流的推理
 """
-import asyncio
 import cv2
 import numpy as np
 from typing import List, Dict, Any
 import time
 
 from ..core.config import settings
-from ..utils.logger import setup_logger
+from ..utils.logger import setup_logger, setup_detection_logger, setup_risk_logger
 from ai_engine.model.model_manager import ModelManager
 
 logger = setup_logger(__name__)
+detection_logger = setup_detection_logger()
+risk_logger = setup_risk_logger()
+
+
+def _iou(box1, box2):
+    """计算两个检测框 [x1, y1, x2, y2] 的 IoU"""
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+
+    inter = max(0, x2 - x1) * max(0, y2 - y1)
+    if inter == 0:
+        return 0.0
+
+    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+
+    return inter / (area1 + area2 - inter + 1e-6)
+
+
+class CameraRiskTracker:
+    """摄像头帧间风险状态追踪，避免逐帧日志刷屏"""
+
+    def __init__(self, iou_threshold: float = 0.3):
+        self.prev_bboxes: Dict[str, list] = {}
+        self.iou_threshold = iou_threshold
+
+    def update(self, risks: List[Dict[str, Any]], detections: List[Dict[str, Any]]):
+        """
+        比较当前帧与上一帧的风险状态，仅在有变化时写入告警日志。
+        """
+        # 构建当前帧风险类型 -> bbox 列表
+        current = {}
+        for risk in risks:
+            rt = risk["type"]
+            bboxes = []
+            for det_id in risk.get("detection_ids", []):
+                if det_id < len(detections):
+                    bboxes.append(detections[det_id]["bbox"])
+            if bboxes:
+                current[rt] = bboxes
+
+        all_types = set(list(self.prev_bboxes.keys()) + list(current.keys()))
+
+        for rt in sorted(all_types):
+            prev_boxes = self.prev_bboxes.get(rt, [])
+            curr_boxes = current.get(rt, [])
+
+            prev_count = len(prev_boxes)
+            curr_count = len(curr_boxes)
+
+            # 统计新增（当前框与所有上一帧框不匹配）
+            new_count = 0
+            for cb in curr_boxes:
+                if not any(_iou(cb, pb) > self.iou_threshold for pb in prev_boxes):
+                    new_count += 1
+
+            # 统计解除（上一帧框与所有当前框不匹配）
+            resolved_count = 0
+            for pb in prev_boxes:
+                if not any(_iou(pb, cb) > self.iou_threshold for cb in curr_boxes):
+                    resolved_count += 1
+
+            if prev_count == 0 and curr_count > 0:
+                risk_logger.warning(
+                    f"[{rt}] Risk detected - {curr_count} violation(s)"
+                )
+            elif prev_count > 0 and curr_count == 0:
+                risk_logger.info(
+                    f"[{rt}] Risk cleared - all {prev_count} violation(s) resolved"
+                )
+            elif new_count > 0 and resolved_count == 0 and curr_count > prev_count:
+                risk_logger.warning(
+                    f"[{rt}] Risk escalated - {new_count} new violation(s) (total: {curr_count})"
+                )
+            elif resolved_count > 0 and new_count == 0 and curr_count < prev_count:
+                risk_logger.info(
+                    f"[{rt}] Risk de-escalated - {resolved_count} violation(s) resolved (remaining: {curr_count})"
+                )
+            elif new_count > 0 and resolved_count > 0:
+                risk_logger.warning(
+                    f"[{rt}] Risk changed - {new_count} new, {resolved_count} resolved (total: {curr_count})"
+                )
+
+        self.prev_bboxes = current
 
 class DetectionService:
     """检测服务"""
 
     def __init__(self, model_manager: ModelManager):
         self.model_manager = model_manager
+        self.risk_tracker = CameraRiskTracker()
 
     async def detect_image(self, image_data: bytes) -> Dict[str, Any]:
         """
         检测单张图片
         """
         try:
-            logger.info(f"📥 检测图片请求到达，数据大小: {len(image_data)} bytes")
+            detection_logger.info(f"Image detection request received, size: {len(image_data)} bytes")
             # 将bytes转换为numpy数组
             nparr = np.frombuffer(image_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
             if image is None:
-                raise ValueError("无法解码图片")
+                raise ValueError("unable to decode image")
 
             # 记录开始时间
             start_time = time.time()
 
             # YOLO26真实推理
-            logger.info("🎯 开始YOLO26真实推理...")
-            print(f"📞 调用 ModelManager.predict，模型实例: {self.model_manager}")
+            detection_logger.info("Starting YOLO26 inference...")
             detections = self.model_manager.predict(
                 image,
                 conf=settings.CONFIDENCE_THRESHOLD,
@@ -45,11 +130,10 @@ class DetectionService:
                 max_det=settings.MAX_DETECTIONS,
                 verbose=False
             )
-            logger.info(f"✅ YOLO26真实推理完成，检测到 {len(detections)} 个目标")
-            print(f"📊 检测结果数量: {len(detections)}")
+            detection_logger.info(f"Inference complete, {len(detections)} object(s) detected")
             if detections:
-                for i, det in enumerate(detections[:3]):  # 显示前3个检测
-                    logger.info(f"  检测{i+1}: {det.get('class')} ({det.get('confidence'):.2f}) at {det.get('bbox')}")
+                for i, det in enumerate(detections[:3]):
+                    detection_logger.info(f"  #{i+1}: {det.get('class')} ({det.get('confidence'):.2f})")
 
             # 计算推理时间
             inference_time = (time.time() - start_time) * 1000
@@ -70,7 +154,7 @@ class DetectionService:
             }
 
         except Exception as e:
-            logger.error(f"图片检测失败: {e}")
+            detection_logger.error(f"Image detection failed: {e}")
             return {
                 "success": False,
                 "error": str(e)
@@ -97,6 +181,8 @@ class DetectionService:
 
             risks_start = time.time()
             risks = await self._apply_risk_rules(detections)
+            # 帧间风险状态追踪（仅摄像头模式），有变化时写入告警日志
+            self.risk_tracker.update(risks, detections)
             risk_time = (time.time() - risks_start) * 1000
 
             inference_time = (time.time() - start_time) * 1000
@@ -129,42 +215,59 @@ class DetectionService:
             }
 
 
+    # 风险规则定义（数据驱动）
+    RISK_RULES = [
+        {
+            "type": "no_helmet",
+            "level": "high",
+            "message": "检测到未佩戴安全帽",
+            "classes": ["no_helmet", "no-helmet"],
+        },
+        {
+            "type": "missing_helmet",
+            "level": "high",
+            "message": "人员未佩戴安全帽",
+            "classes": ["person", "persons"],
+            "absent_classes": ["helmet"],
+        },
+        {
+            "type": "no_vest",
+            "level": "medium",
+            "message": "检测到未穿防护衣",
+            "classes": ["none"],
+        },
+    ]
+
     async def _apply_risk_rules(self, detections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        应用风险规则
+        应用风险规则（数据驱动）
         """
+        # 按类别建立查找表：class_name -> [(index, detection)]
+        by_class: Dict[str, List[tuple[int, dict]]] = {}
+        for i, d in enumerate(detections):
+            cls = d.get("class", "").lower()
+            by_class.setdefault(cls, []).append((i, d))
+
         risks = []
+        for rule in self.RISK_RULES:
+            # 收集匹配该规则的检测结果
+            matches = []
+            for cls in rule["classes"]:
+                matches.extend(by_class.get(cls, []))
 
-        # 检查是否有未戴安全帽
-        no_helmet_detections = [d for d in detections if d.get("class", "").lower() in ["no_helmet", "no-helmet"]]
-        if no_helmet_detections:
+            # 如果规则要求某些类别必须缺失
+            absent = rule.get("absent_classes", [])
+            has_absent = any(by_class.get(c, []) for c in absent)
+
+            if not matches or (absent and has_absent):
+                continue
+
             risks.append({
-                "type": "no_helmet",
-                "level": "high",
-                "message": "检测到未佩戴安全帽",
-                "count": len(no_helmet_detections)
-            })
-
-        # 检查是否有人员但无安全帽
-        person_detections = [d for d in detections if d.get("class", "").lower() in ["person", "persons"]]
-        helmet_detections = [d for d in detections if d.get("class", "").lower() == "helmet"]
-
-        if person_detections and not helmet_detections:
-            risks.append({
-                "type": "missing_helmet",
-                "level": "high",
-                "message": "人员未佩戴安全帽",
-                "count": len(person_detections)
-            })
-
-        # 检查是否有完全无防护
-        none_detections = [d for d in detections if d.get("class", "").lower() == "none"]
-        if none_detections:
-            risks.append({
-                "type": "no_ppe",
-                "level": "critical",
-                "message": "检测到完全无防护人员",
-                "count": len(none_detections)
+                "type": rule["type"],
+                "level": rule["level"],
+                "message": rule["message"],
+                "count": len(matches),
+                "detection_ids": [i for i, _ in matches],
             })
 
         return risks
@@ -238,7 +341,7 @@ class DetectionService:
             return encoded_image.tobytes()
 
         except Exception as e:
-            logger.error(f"图片标注失败: {e}")
+            logger.error(f"Annotate image failed: {e}")
             # 返回原始图片
             success, encoded_image = cv2.imencode('.jpg', image)
             return encoded_image.tobytes() if success else b""

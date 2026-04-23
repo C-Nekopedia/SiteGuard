@@ -9,7 +9,9 @@ import numpy as np
 from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Depends
+from websockets.exceptions import ConnectionClosedOK
 
+from ..core.config import settings
 from ..services.detection_service import DetectionService
 from ..utils.logger import setup_logger
 
@@ -139,6 +141,8 @@ async def camera_stream(
     """
     await manager.connect(websocket)
 
+    loop = asyncio.get_event_loop()
+
     # 立即发送连接成功消息
     try:
         await websocket.send_json({
@@ -164,14 +168,22 @@ async def camera_stream(
 
         # 主循环
         while True:
-            # 读取帧
-            frame = manager.read_frame()
+            # 非阻塞读帧（cv2.VideoCapture.read() 是阻塞调用，用 executor 避免卡死事件循环）
+            frame = await loop.run_in_executor(None, manager.read_frame)
             if frame is None:
                 await asyncio.sleep(0.1)
                 continue
 
+            # 每帧检测客户端是否已断开
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=0.001)
+            except asyncio.TimeoutError:
+                pass  # 无消息，正常继续
+            except WebSocketDisconnect:
+                raise
+
             # 调整大小以提高性能
-            frame = cv2.resize(frame, (480, 360))
+            frame = cv2.resize(frame, (settings.CAMERA_FRAME_WIDTH, settings.CAMERA_FRAME_HEIGHT))
 
             # 执行检测
             try:
@@ -195,13 +207,13 @@ async def camera_stream(
 
                     # 转换为JPEG
                     _, buffer = cv2.imencode('.jpg', annotated_frame, [
-                        cv2.IMWRITE_JPEG_QUALITY, 50
+                        cv2.IMWRITE_JPEG_QUALITY, settings.CAMERA_JPEG_QUALITY
                     ])
                     frame_base64 = base64.b64encode(buffer).decode('utf-8')
                 else:
                     # 使用原始帧
                     _, buffer = cv2.imencode('.jpg', frame, [
-                        cv2.IMWRITE_JPEG_QUALITY, 50
+                        cv2.IMWRITE_JPEG_QUALITY, settings.CAMERA_JPEG_QUALITY
                     ])
                     frame_base64 = base64.b64encode(buffer).decode('utf-8')
 
@@ -220,13 +232,15 @@ async def camera_stream(
                 }
             try:
                 await websocket.send_json(message)
+            except (WebSocketDisconnect, ConnectionClosedOK):
+                raise
             except Exception as e:
                 logger.error(f"发送WebSocket数据失败: {e}")
                 logger.error(f"错误详情: {traceback.format_exc()}")
                 break
 
     except WebSocketDisconnect:
-        logger.info("📡 WebSocket连接断开")
+        logger.info("WebSocket连接断开")
     except Exception as e:
         logger.error(f"摄像头流异常: {e}")
         await websocket.send_json({

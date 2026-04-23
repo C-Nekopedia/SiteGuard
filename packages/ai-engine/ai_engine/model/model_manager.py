@@ -135,8 +135,7 @@ class ModelManager:
                         if target_half:
                             logger.warning("CPU不支持半精度推理，将使用全精度")
                 elif model_info["type"] == ModelType.ONNX.value:
-                    # ONNX模型需要不同的加载方式
-                    pass
+                    raise NotImplementedError("ONNX模型加载尚未实现")
 
                 self.current_model = model_name
                 self.use_end2end = use_end2end  # 存储端到端设置

@@ -11,7 +11,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "ultralytics>=8.4.0",
-        "numpy>=1.24.0",
+        "numpy>=1.24.3,<2",
         "opencv-python>=4.8.0",
         "PyYAML>=6.0",
         "watchdog>=3.0.0",

@@ -65,7 +65,7 @@ async def switch_model(request: Request, model_name: str, use_end2end: bool = No
             )
 
         # 调用ModelManager切换模型
-        logger.info(f"🔄 请求切换模型: {model_name}, 端到端推理: {use_end2end}")
+        logger.info(f"请求切换模型: {model_name}, 端到端推理: {use_end2end}")
         success = model_manager.switch_model(model_name, use_end2end=use_end2end)
 
         if not success:

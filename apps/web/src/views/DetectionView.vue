@@ -8,7 +8,7 @@
       </div>
 
       <div class="menu-item active">
-        <span>Live Monitor</span>
+        <span>Monitor</span>
       </div>
     </nav>
 
@@ -16,7 +16,7 @@
     <div class="main-container">
       <!-- 顶部标题和输入源切换 -->
       <header class="main-header">
-        <h1>风险识别工作站</h1>
+        <h1>Monitor</h1>
         <div class="source-tabs">
           <button class="tab" :class="{ active: activeInputType === 'camera' }" @click="switchInputType('camera')">
             摄像头
@@ -54,7 +54,7 @@
                   </el-icon>
                 </div>
                 <p style="margin: 0; font-weight: 600;">摄像头未启动</p>
-                <p style="margin: 4px 0 0; font-size: 0.8rem;">使用右侧控制面板按钮启动实时摄像头检测</p>
+                <p style="margin: 4px 0 0; font-size: 0.8rem;">使用按钮启动实时摄像头检测</p>
               </div>
               <div v-else class="camera-active">
                 <div class="camera-status">
@@ -126,68 +126,85 @@
         <!-- 右侧：实时检测日志 -->
         <div class="alert-panel">
           <div class="alert-header">
-            <span>实时检测日志</span>
-            <button class="btn-clear-logs" @click="clearLogs" :disabled="detectionHistory.length === 0">
+            <span>{{ activeInputType === 'camera' ? '实时状态' : '检测日志' }}</span>
+            <button v-if="activeInputType !== 'camera'" class="btn-clear-logs" @click="clearLogs" :disabled="detectionHistory.length === 0">
               清理日志
             </button>
           </div>
           <div class="alert-list">
-            <!-- 无检测结果 -->
-            <div v-if="detectionHistory.length === 0" class="empty-alerts">
-              <p>暂无检测记录</p>
-              <p class="hint">上传图片或启动摄像头开始检测</p>
-            </div>
+            <!-- 摄像头模式：实时状态概览 -->
+            <template v-if="activeInputType === 'camera'">
+              <div v-if="!isCameraActive" class="empty-alerts">
+                <p>摄像头未启动</p>
+                <p class="hint">使用按钮启动实时检测</p>
+              </div>
+              <div v-else class="camera-status-summary">
+                <div class="summary-row">
+                  <span class="summary-label">人员</span>
+                  <span class="summary-value">{{ cameraSummary.person }}</span>
+                </div>
+                <div class="summary-row" v-for="risk in activeRisks" :key="risk.type">
+                  <span class="summary-label">{{ risk.message }}</span>
+                  <span class="summary-value summary-risk">{{ risk.count }}</span>
+                </div>
+                <div class="summary-row" v-if="activeRisks.length === 0">
+                  <span class="summary-label summary-safe">所有人员防护到位</span>
+                </div>
+              </div>
+            </template>
 
-            <!-- 检测记录 -->
-            <div v-for="(item, index) in detectionHistory" :key="index" class="alert-item">
-              <div class="status-dot" :style="{
-                background: item.riskLevel === 'high' ? 'var(--danger)' :
-                  item.riskLevel === 'critical' ? 'var(--danger)' : 'var(--success)'
-              }"></div>
-              <div class="alert-content">
-                <div class="alert-title">
-                  {{ item.message }}
-                  <button class="btn-expand" @click.stop="toggleExpand(index)">
-                    {{ item.expanded ? '收起' : '展开' }}
-                  </button>
-                </div>
-                <div class="alert-details">
-                  <span class="source">检测源: {{ item.source }}</span>
-                  <span class="time">{{ item.timestamp }}</span>
-                </div>
-                <!-- 详细检测内容 -->
-                <div v-if="item.expanded && (item.detections?.length > 0 || item.risks?.length > 0)" class="detection-details">
-                  <!-- 检测到的对象 -->
-                  <div v-if="item.detections?.length > 0" class="detection-section">
-                    <h4>检测到的对象 ({{ item.detections.length }}个):</h4>
-                    <div class="detection-list">
-                      <div v-for="(det, detIndex) in sortDetections(item.detections)" :key="detIndex" class="detection-item">
-                        <span class="detection-class" :style="{ color: classColors[det.class] || '#94A3B8' }">
-                          {{ classLabels[det.class] || det.class }}
-                        </span>
-                        <span class="detection-confidence">{{ (det.confidence * 100).toFixed(0) }}%</span>
-                        <span class="detection-bbox">位置: [{{ det.bbox.map((c: number) => c.toFixed(1)).join(', ') }}]</span>
+            <!-- 图片模式：检测记录列表 -->
+            <template v-else>
+              <div v-if="detectionHistory.length === 0" class="empty-alerts">
+                <p>暂无检测记录</p>
+                <p class="hint">上传图片开始检测</p>
+              </div>
+              <div v-for="(item, index) in detectionHistory" :key="index" class="alert-item">
+                <div class="status-dot" :style="{
+                  background: item.riskLevel === 'high' ? 'var(--danger)' :
+                    item.riskLevel === 'critical' ? 'var(--danger)' : 'var(--success)'
+                }"></div>
+                <div class="alert-content">
+                  <div class="alert-title">
+                    {{ item.message }}
+                    <button class="btn-expand" @click.stop="toggleExpand(index)">
+                      {{ item.expanded ? '收起' : '展开' }}
+                    </button>
+                  </div>
+                  <div class="alert-details">
+                    <span class="source">来源: {{ item.source }}</span>
+                    <span class="time">{{ item.timestamp }}</span>
+                  </div>
+                  <div v-if="item.expanded && (item.detections?.length > 0 || item.risks?.length > 0)" class="detection-details">
+                    <div v-if="item.detections?.length > 0" class="detection-section">
+                      <h4>检测到的对象 ({{ item.detections.length }}个):</h4>
+                      <div class="detection-list">
+                        <div v-for="(det, detIndex) in sortDetections(item.detections)" :key="detIndex" class="detection-item">
+                          <span class="detection-class" :style="{ color: classColors[det.class] || '#94A3B8' }">
+                            {{ classLabels[det.class] || det.class }}
+                          </span>
+                          <span class="detection-confidence">{{ (det.confidence * 100).toFixed(0) }}%</span>
+                          <span class="detection-bbox">[{{ det.bbox.map((c: number) => c.toFixed(1)).join(', ') }}]</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <!-- 风险信息 -->
-                  <div v-if="item.risks?.length > 0" class="risk-section">
-                    <h4>风险告警 ({{ item.risks.length }}个):</h4>
-                    <div class="risk-list">
-                      <div v-for="(risk, riskIndex) in item.risks" :key="riskIndex" class="risk-item">
-                        <span class="risk-level" :style="{ color: risk.level === 'critical' ? '#DC2626' : risk.level === 'high' ? '#EF4444' : '#F59E0B' }">
-                          {{ risk.level === 'critical' ? '严重' : risk.level === 'high' ? '高危' : '中危' }}
-                        </span>
-                        <span class="risk-message">{{ risk.message }}</span>
-                        <span v-if="risk.count" class="risk-count">数量: {{ risk.count }}</span>
+                    <div v-if="item.risks?.length > 0" class="risk-section">
+                      <h4>风险告警 ({{ item.risks.length }}个):</h4>
+                      <div class="risk-list">
+                        <div v-for="(risk, riskIndex) in item.risks" :key="riskIndex" class="risk-item">
+                          <span class="risk-level" :style="{ color: risk.level === 'critical' ? '#DC2626' : risk.level === 'high' ? '#EF4444' : '#F59E0B' }">
+                            {{ risk.level === 'critical' ? '严重' : risk.level === 'high' ? '高危' : '中危' }}
+                          </span>
+                          <span class="risk-message">{{ risk.message }}</span>
+                          <span v-if="risk.count" class="risk-count">数量: {{ risk.count }}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
-
         </div>
       </div>
 
@@ -222,6 +239,9 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
+// API基础URL，通过环境变量配置
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 // 状态定义
 const activeInputType = ref('image')
 const selectedModel = ref('yolo26n_ppe')
@@ -236,7 +256,11 @@ const isCameraActive = ref(false)
 const cameraLoading = ref(false)
 const detectionLoading = ref(false)
 const availableModels = ref<any[]>([])
-const detectionHistory = ref<any[]>([])
+
+// 分离图片检测日志
+const imageLogs = ref<any[]>([])
+const cameraLogs = ref<any[]>([])
+const detectionHistory = computed(() => imageLogs.value)
 
 // 摄像头流相关状态
 const cameraStreamUrl = ref<string>('')
@@ -262,6 +286,16 @@ const canStartDetection = computed(() => {
   // 摄像头实时检测自动进行，不需要手动开始
   if (activeInputType.value === 'camera') return false
   return false
+})
+
+// 摄像头实时状态摘要
+const cameraSummary = computed(() => {
+  const summary: Record<string, number> = { person: 0 }
+  for (const det of detections.value) {
+    const cls = (det.class || '').toLowerCase()
+    if (cls === 'person') summary.person++
+  }
+  return summary
 })
 
 // 颜色映射：无危险（有防护）为绿色，有危险（无防护）为红色
@@ -406,8 +440,6 @@ const connectCameraWebSocket = () => {
         }
 
         if (data.type === 'connected') {
-          // 连接成功确认
-          console.log('WebSocket连接确认:', data.message)
           ElMessage.success('摄像头连接已就绪')
         } else if (data.type === 'frame') {
           // 更新摄像头流URL
@@ -419,24 +451,6 @@ const connectCameraWebSocket = () => {
             activeRisks.value = data.risks || []
             inferenceLatency.value = data.inference_time || 0
             detectionCount.value = detections.value.length
-
-            // 添加到检测历史
-            if (detections.value.length > 0 || activeRisks.value.length > 0) {
-              detectionHistory.value.unshift({
-                timestamp: new Date().toLocaleTimeString(),
-                source: '摄像头实时检测',
-                message: activeRisks.value.length > 0 ? '检测到风险' : '检测完成',
-                riskLevel: activeRisks.value.length > 0 ? 'high' : 'success',
-                detections: [...detections.value],
-                risks: [...activeRisks.value],
-                expanded: false
-              })
-
-              // 限制历史记录数量
-              if (detectionHistory.value.length > 10) {
-                detectionHistory.value = detectionHistory.value.slice(0, 10)
-              }
-            }
           }
 
           // 计算FPS
@@ -538,35 +552,32 @@ const detectImage = async () => {
       inferenceLatency.value = result.inference_time || 0
       detectionCount.value = detections.value.length
 
-      // 更新检测历史
-      detectionHistory.value.unshift({
+      // 更新检测历史（图片模式）
+      imageLogs.value.unshift({
         timestamp: new Date().toLocaleTimeString(),
         source: file.name,
         message: activeRisks.value.length > 0 ? '检测到风险' : '检测完成',
         riskLevel: activeRisks.value.length > 0 ? 'high' : 'success',
-        detections: [...detections.value], // 存储完整的检测结果
-        risks: [...activeRisks.value], // 存储风险信息
-        expanded: false // 控制是否展开显示详情
+        detections: [...detections.value],
+        risks: [...activeRisks.value],
+        expanded: false
       })
-
-      // 限制历史记录数量
-      if (detectionHistory.value.length > 10) {
-        detectionHistory.value = detectionHistory.value.slice(0, 10)
+      if (imageLogs.value.length > 10) {
+        imageLogs.value = imageLogs.value.slice(0, 10)
       }
 
       // 更新标注图片URL - 后端始终返回标注图片
       const annotatedUrl = result.annotated_image_url
         ? (result.annotated_image_url.startsWith('http')
             ? result.annotated_image_url
-            : `http://localhost:8000${result.annotated_image_url}`)
-        : `http://localhost:8000/static/temp/annotated_${Date.now()}.jpg`
+            : `${API_BASE_URL}${result.annotated_image_url}`)
+        : `${API_BASE_URL}/static/temp/annotated_${Date.now()}.jpg`
 
       // 撤销之前的对象URL（如果是blob URL）
       if (currentImageUrl.value && currentImageUrl.value.startsWith('blob:')) {
         URL.revokeObjectURL(currentImageUrl.value)
       }
 
-      console.log('使用标注图片URL:', annotatedUrl)
       currentImageUrl.value = annotatedUrl
 
       ElMessage.success('图片检测完成')
@@ -595,7 +606,11 @@ const clearResult = () => {
 }
 
 const clearLogs = () => {
-  detectionHistory.value = []
+  if (activeInputType.value === 'camera') {
+    cameraLogs.value = []
+  } else {
+    imageLogs.value = []
+  }
   ElMessage.success('已清空检测日志')
 }
 
@@ -677,7 +692,7 @@ html, body {
 </style>
 
 <style scoped>
-* {
+.detection-container * {
   transition: all 0.2s ease;
 }
 
@@ -1053,6 +1068,45 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* 摄像头实时状态摘要 */
+.camera-status-summary {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: var(--text-body);
+}
+
+.summary-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.summary-risk {
+  color: var(--danger);
+}
+
+.summary-safe {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.summary-meta .summary-value {
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .btn-clear-logs {

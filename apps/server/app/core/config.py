@@ -20,16 +20,17 @@ class Settings(BaseSettings):
     ALLOWED_IMAGE_TYPES: list[str] = ["image/jpeg", "image/png", "image/jpg"]
 
     # 路径配置
-    # 可以通过环境变量 SITEGUARD_BASE_DIR 覆盖
-    BASE_DIR: Path = Path(__file__).parent.parent.parent.parent.parent
+    # 可以通过环境变量 SITEGUARD_BASE_DIR 覆盖，默认向上查找5级（从 config.py 到项目根目录）
+    _BASE_DIR_FALLBACK: Path = Path(__file__).resolve().parent.parent.parent.parent.parent
+    BASE_DIR: Path = Path(os.environ.get("SITEGUARD_BASE_DIR", str(_BASE_DIR_FALLBACK)))
     # 模型目录，环境变量：MODELS_DIR
     MODELS_DIR: Path = BASE_DIR / "data" / "models"
     # 数据目录，环境变量：DATA_DIR
     DATA_DIR: Path = BASE_DIR / "data" / "raw"
     # 静态文件目录，环境变量：STATIC_DIR
-    STATIC_DIR: Path = Path(__file__).parent.parent.parent / "static"
+    STATIC_DIR: Path = BASE_DIR / "apps" / "server" / "static"
     # 导出目录，环境变量：EXPORTS_DIR
-    EXPORTS_DIR: Path = Path(__file__).parent.parent.parent / "exports"
+    EXPORTS_DIR: Path = BASE_DIR / "apps" / "server" / "exports"
 
     # AI配置
     DEFAULT_MODEL: str = "yolo26n_ppe.pt"
@@ -37,11 +38,23 @@ class Settings(BaseSettings):
     IOU_THRESHOLD: float = 0.5
     MAX_DETECTIONS: int = 300  # YOLO26一对一头部最大检测数
 
-    # 风险规则配置
-    RULES_DIR: Path = BASE_DIR / "packages" / "ai-engine" / "ai_engine" / "rules"
+    # CORS配置
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    # 摄像头配置
+    CAMERA_FRAME_WIDTH: int = 480
+    CAMERA_FRAME_HEIGHT: int = 360
+    CAMERA_JPEG_QUALITY: int = 50
+
+    # 临时文件清理延迟（秒）
+    TEMP_FILE_CLEANUP_DELAY: int = 3600
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",")]
 
     @field_validator(
-        "MODELS_DIR", "DATA_DIR", "STATIC_DIR", "EXPORTS_DIR", "RULES_DIR",
+        "MODELS_DIR", "DATA_DIR", "STATIC_DIR", "EXPORTS_DIR",
         mode="after"
     )
     @classmethod
@@ -97,7 +110,6 @@ def validate_paths() -> tuple[bool, list[str]]:
         ("DATA_DIR", settings.DATA_DIR, False, "数据目录"),  # 不一定需要存在
         ("STATIC_DIR", settings.STATIC_DIR, True, "静态文件目录"),
         ("EXPORTS_DIR", settings.EXPORTS_DIR, True, "导出目录"),
-        ("RULES_DIR", settings.RULES_DIR, False, "规则目录"),  # 不一定需要存在
     ]
 
     for name, path, must_exist, desc in critical_dirs:

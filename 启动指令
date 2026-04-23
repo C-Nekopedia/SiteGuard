@@ -1,9 +1,9 @@
 虚拟环境：
-venv\Scripts\activate
+.venv\Scripts\activate
 
 前端：
 cd "d:\CODE\SiteGuard\apps\web"
-npm run dev
+pnpm run dev
 
 后端：
 cd "d:\CODE\SiteGuard\apps\server"

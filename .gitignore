@@ -36,7 +36,6 @@ pnpm-debug.log*
 .pnpm-store/
 
 # Turbo / pnpm
-.pnpm-store/
 .turbo/
 
 # IDE
@@ -91,10 +90,11 @@ apps/web/.env
 
 # Model files
 data/models/
+# 示例模型（除外）
+!data/models/yolo26n_ppe.pt
 
 # Temporary files
 apps/server/static/temp/
 
 # Lock files (pnpm is used)
 package-lock.json
-pnpm-lock.yaml

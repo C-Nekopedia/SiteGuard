@@ -1,6 +1,7 @@
 """
 检测相关路由
 """
+import asyncio
 import uuid
 from pathlib import Path
 from datetime import datetime, timezone
@@ -103,9 +104,8 @@ async def cleanup_temp_file(file_path: Path):
     """
     清理临时文件（后台任务）
     """
-    import asyncio
     try:
-        await asyncio.sleep(3600)  # 1小时后清理
+        await asyncio.sleep(settings.TEMP_FILE_CLEANUP_DELAY)
 
         # 正常执行清理
         try:
