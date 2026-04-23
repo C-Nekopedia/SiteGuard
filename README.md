@@ -6,7 +6,7 @@ SiteGuard is a construction site safety monitoring system that uses computer vis
 
 ## UI Preview
 
-![Frontend UI Preview](data/preview/Frontend_preview.png)
+![Frontend UI Preview](https://cdn.jsdelivr.net/gh/C-Nekopedia/SiteGuard/data/preview/Frontend_preview.png)
 
 *Detection interface: upload an image and the system automatically identifies PPE (helmets, vests, gloves, etc.) and marks risks.*
 
