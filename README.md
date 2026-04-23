@@ -6,11 +6,11 @@ SiteGuard is a construction site safety monitoring system that uses computer vis
 
 ## Features
 
-- **Real-time PPE detection**: Detects helmets, safety vests, gloves, boots, and goggles using YOLOv8/YOLOv26 models
-- **Risk rule engine**: Configurable rules for identifying safety violations (e.g., person without helmet, missing vest)
-- **Web dashboard**: Vue.js frontend for uploading images, viewing detections, and managing rules
-- **REST API**: FastAPI backend for image processing and detection
-- **Modular monorepo**: Separated into apps (web, server) and packages (ai-engine, schema, utils, logger)
+- **Real-time PPE detection**: Detects helmets, safety vests, gloves, boots, and goggles using YOLOv26 models
+- **Risk evaluation**: Built-in rules for identifying safety violations (e.g., person without helmet, missing vest)
+- **Web dashboard**: Vue.js frontend for uploading images and viewing detections with camera stream support
+- **REST API + WebSocket**: FastAPI backend for image processing and real-time camera detection
+- **Modular monorepo**: Organized into apps (web, server) and package (ai-engine)
 
 ## Project Structure
 
@@ -21,18 +21,14 @@ site-guard-monorepo/
 │   │   ├── src/
 │   │   └── package.json
 │   └── server/                 # FastAPI backend
-│       ├── app/
-│       └── requirements.txt
+│       └── app/
 ├── packages/
-│   ├── ai-engine/              # AI inference engine
-│   │   ├── ai_engine/
-│   │   │   ├── inference/      # YOLO26 inference
-│   │   │   └── rules/          # Risk rule engine
-│   │   └── ai_engine.egg-info/
-│   ├── schema/                 # TypeScript schemas
-│   ├── logger/                 # Logging utilities
-│   └── utils/                  # Shared utilities
-├── data/                       # Dataset and sample images
+│   └── ai-engine/              # AI inference engine
+│       ├── ai_engine/
+│       │   └── model/          # Model manager (load, switch, predict)
+│       └── setup.py
+├── data/                       # Model and sample data
+│   ├── models/                 # Trained model files
 │   └── raw/                    # Raw construction site images
 └── package.json                # Monorepo root (pnpm + turbo)
 ```
@@ -54,31 +50,30 @@ cd SiteGuard
 ### 2. Install dependencies
 
 ```bash
-# Install Node.js dependencies (frontend and packages)
+# Install Node.js dependencies (frontend)
 pnpm install
 
 # Set up Python virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install Python dependencies
-pip install -r apps/server/requirements.txt
+pip install -r requirements.txt
 pip install -e packages/ai-engine
 ```
 
 ### 3. Set up environment variables
 
-Create `.env` file in the root directory:
+Copy `.env.example` to `.env` in the project root and adjust as needed:
 
 ```env
-# Server
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
-LOG_LEVEL=INFO
-
-# AI Engine
-MODEL_PATH=data/models/yolo26_construction_ppe.pt
-RULES_PATH=packages/ai-engine/ai_engine/rules/ppe_rules.yaml
+SITEGUARD_BASE_DIR=
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+CORS_ORIGINS=http://localhost:3000
+DEFAULT_MODEL=yolo26n_ppe.pt
+CONFIDENCE_THRESHOLD=0.5
 ```
 
 ### 4. Start the development servers
@@ -121,38 +116,29 @@ curl -X POST -F "file=@image.jpg" http://localhost:8000/api/detect
 ### AI Engine (Standalone)
 
 ```python
-from ai_engine.inference.yolo26_inference import YOLO26Inference
 from ai_engine.model.model_manager import ModelManager
 import cv2
 
 # Load model
-model_manager = ModelManager("path/to/model.pt")
-inference = YOLO26Inference(model_manager)
+model_manager = ModelManager("data/models")
+model_manager.initialize()
+model_manager.load_model("yolo26n_ppe.pt")
 
 # Detect PPE
 image = cv2.imread("construction_site.jpg")
-results = inference.predict_image(image)
-print(results["detections"])
+results = model_manager.predict(image)
+print(results)
 ```
 
 ## Configuration
 
 ### Risk Rules
 
-Risk rules are defined in YAML files (`packages/ai-engine/ai_engine/rules/ppe_rules.yaml`). Example:
-
-```yaml
-rules:
-  - name: missing_helmet
-    condition: "person_detected and (class_id == 7)"
-    level: "high"
-    message: "未佩戴安全帽"
-    description: "检测到人员但未佩戴安全帽"
-```
+Risk rules are defined in `DetectionService` (`apps/server/app/services/detection_service.py`). The system evaluates detected objects against a set of rules to identify safety violations such as missing helmets or vests. Rules are data-driven -- adding a new rule is done by appending an entry to the `RISK_RULES` list.
 
 ### Model
 
-The default model is YOLOv8/YOLOv26 fine-tuned on a construction PPE dataset. Place your model file at `data/models/yolo26_construction_ppe.pt` or update the `MODEL_PATH` environment variable.
+The project includes a YOLOv26 model fine-tuned on a construction PPE dataset. The model file `yolo26n_ppe.pt` is located in `data/models/` and is included in the repository as an example. You can replace it with your own trained model and update `DEFAULT_MODEL` in `.env`.
 
 ### Dataset
 
