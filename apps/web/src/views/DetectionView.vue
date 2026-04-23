@@ -78,18 +78,7 @@
                   </el-icon>
                 </div>
                 <p style="margin: 0; font-weight: 600;">摄像头未启动</p>
-                <p style="margin: 4px 0 0; font-size: 0.8rem;">点击下方按钮启动实时摄像头检测</p>
-                <button
-                  class="btn btn-primary"
-                  @click="toggleCamera"
-                  :disabled="cameraLoading"
-                  style="margin-top: 16px; padding: 10px 24px; font-size: 0.9rem;"
-                >
-                  <el-icon v-if="cameraLoading" class="loading-icon">
-                    <Loading />
-                  </el-icon>
-                  {{ cameraLoading ? '启动中...' : '启动摄像头' }}
-                </button>
+                <p style="margin: 4px 0 0; font-size: 0.8rem;">使用右侧控制面板按钮启动实时摄像头检测</p>
               </div>
               <div v-else class="camera-active">
                 <div class="camera-status">
@@ -134,13 +123,26 @@
               </span>
             </div>
             <div class="control-buttons">
-              <button class="btn btn-secondary" @click="clearResult" :disabled="!currentImageUrl && !detectionLoading">
-                清除结果
-              </button>
-              <button class="btn btn-primary" @click="startDetection" :disabled="detectionLoading || !canStartDetection"
-                v-loading="detectionLoading">
-                {{ detectionLoading ? '检测中...' : '开始检测' }}
-              </button>
+              <!-- 摄像头模式 -->
+              <template v-if="activeInputType === 'camera'">
+                <button class="btn btn-secondary" @click="toggleCamera" :disabled="cameraLoading || !isCameraActive">
+                  关闭摄像头
+                </button>
+                <button class="btn btn-primary" @click="toggleCamera" :disabled="cameraLoading || isCameraActive"
+                  v-loading="cameraLoading">
+                  {{ cameraLoading ? '启动中...' : '启用摄像头' }}
+                </button>
+              </template>
+              <!-- 图片和视频模式 -->
+              <template v-else>
+                <button class="btn btn-secondary" @click="clearResult" :disabled="!currentImageUrl && !detectionLoading">
+                  清除结果
+                </button>
+                <button class="btn btn-primary" @click="startDetection" :disabled="detectionLoading || !canStartDetection"
+                  v-loading="detectionLoading">
+                  {{ detectionLoading ? '检测中...' : '开始检测' }}
+                </button>
+              </template>
             </div>
           </div>
         </div>
@@ -452,7 +454,19 @@ const connectCameraWebSocket = () => {
       try {
         const data = JSON.parse(event.data)
 
-        if (data.type === 'frame') {
+        // 确保摄像头状态已激活
+        if (cameraLoading.value) {
+          cameraLoading.value = false
+        }
+        if (!isCameraActive.value) {
+          isCameraActive.value = true
+        }
+
+        if (data.type === 'connected') {
+          // 连接成功确认
+          console.log('WebSocket连接确认:', data.message)
+          ElMessage.success('摄像头连接已就绪')
+        } else if (data.type === 'frame') {
           // 更新摄像头流URL
           cameraStreamUrl.value = `data:image/jpeg;base64,${data.frame}`
 
@@ -517,16 +531,16 @@ const connectCameraWebSocket = () => {
       }
     }
 
-    // 设置超时
+    // 设置超时（增加到15秒，因为摄像头启动和模型加载需要时间）
     setTimeout(() => {
       if (cameraLoading.value && !isCameraActive.value) {
         cameraLoading.value = false
         if (cameraWebSocket.value) {
           cameraWebSocket.value.close()
         }
-        ElMessage.error('摄像头连接超时')
+        ElMessage.error('摄像头连接超时（15秒）')
       }
-    }, 5000)
+    }, 15000)
 
   } catch (error) {
     console.error('启动摄像头失败:', error)

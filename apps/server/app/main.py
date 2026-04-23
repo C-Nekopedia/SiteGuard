@@ -13,8 +13,6 @@ import uvicorn
 
 from .routes import detection, models, camera
 from .core.config import settings, validate_paths
-from ai_engine.model.model_manager import ModelManager
-from .services.detection_service import DetectionService
 from .utils.logger import setup_logger
 
 # 添加当前app目录到Python路径，解决模块导入问题
@@ -26,7 +24,9 @@ project_root = Path(__file__).parent.parent.parent.parent.parent
 ai_engine_path = project_root / "packages" / "ai-engine"
 sys.path.insert(0, str(ai_engine_path))
 
-
+# 导入AI引擎模块
+from ai_engine.model.model_manager import ModelManager
+from .services.detection_service import DetectionService
 
 # 设置日志
 logger = setup_logger(__name__)
@@ -130,7 +130,12 @@ if __name__ == "__main__":
     # 根据运行方式动态选择模块名
     # 如果在app目录下直接运行python main.py，使用"__main__"
     # 如果在server目录下运行python -m app.main，使用"app.main"
-    module_name = "__main__" if __package__ is None else "app.main"
+    # 如果在项目根目录运行python -m apps.server.app.main，使用"apps.server.app.main"
+    if __package__ is None:
+        module_name = "__main__"
+    else:
+        # 构建完整模块路径
+        module_name = __package__ + ".main"
     uvicorn.run(
         f"{module_name}:app",
         host="0.0.0.0",

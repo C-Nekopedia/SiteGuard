@@ -49,7 +49,7 @@ async def detect_image(
                 detail=f"文件大小不能超过 {settings.MAX_UPLOAD_SIZE // 1024 // 1024}MB"
             )
 
-        logger.info(f"📸 收到图片检测请求: {file.filename}, 大小: {len(contents)} bytes")
+        logger.info(f"收到图片检测请求: {file.filename}, 大小: {len(contents)} bytes")
 
         # 执行检测
         result = await detection_service.detect_image(contents)
@@ -67,7 +67,7 @@ async def detect_image(
         with open(annotated_path, "wb") as f:
             f.write(result["annotated_image"])
 
-        # 添加后台任务：1小时后清理临时文件
+        # 添加后台任务：清理临时文件
         if background_tasks:
             background_tasks.add_task(cleanup_temp_file, annotated_path)
 
@@ -112,7 +112,7 @@ async def detect_video(
             contents = await file.read()
             f.write(contents)
 
-        logger.info(f"🎬 收到视频检测请求: {file.filename}, 大小: {len(contents)} bytes")
+        logger.info(f"收到视频检测请求: {file.filename}, 大小: {len(contents)} bytes")
 
         # 定义SSE流生成器
         async def generate_sse():
@@ -123,7 +123,7 @@ async def detect_video(
                 # 清理临时文件
                 try:
                     temp_file_path.unlink()
-                    logger.info(f"🧹 清理临时视频文件: {temp_file_path}")
+                    logger.info(f"清理临时视频文件: {temp_file_path}")
                 except Exception as e:
                     logger.error(f"清理临时文件失败: {e}")
 
@@ -171,7 +171,7 @@ async def cleanup_temp_file(file_path: Path):
         try:
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"🧹 后台清理临时文件: {file_path}")
+                logger.info(f"后台清理临时文件: {file_path}")
         except Exception as e:
             logger.error(f"后台清理文件失败: {e}")
 
@@ -181,7 +181,7 @@ async def cleanup_temp_file(file_path: Path):
         try:
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"🧹 应用关闭时清理临时文件: {file_path}")
+                logger.info(f"应用关闭时清理临时文件: {file_path}")
         except Exception as e:
             logger.error(f"清理临时文件失败: {e}")
         # 安静地退出，不传播取消异常

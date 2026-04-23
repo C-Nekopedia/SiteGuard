@@ -4,6 +4,7 @@
 import os
 import time
 import threading
+import torch
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from enum import Enum
@@ -27,6 +28,23 @@ class ModelManager:
         self.model_lock = threading.Lock()
         self._initialized = False
         self.use_end2end = True  # 默认启用端到端推理
+        # 设备配置
+        self.default_device = self._detect_default_device()
+        self.default_half = False  # 默认不使用半精度（单张图像推理）
+        self.camera_device = self.default_device  # 摄像头推理设备
+        self.camera_half = True  # 摄像头推理使用半精度
+
+    def _detect_default_device(self) -> str:
+        """检测默认设备"""
+        if torch.cuda.is_available():
+            device_count = torch.cuda.device_count()
+            print(f"检测到 {device_count} 个CUDA设备:")
+            for i in range(device_count):
+                print(f"  - GPU {i}: {torch.cuda.get_device_name(i)}")
+            return "cuda:0"
+        else:
+            print("未检测到CUDA设备，将使用CPU")
+            return "cpu"
 
     def initialize(self):
         """初始化模型管理器"""
@@ -69,13 +87,15 @@ class ModelManager:
             "created": stat.st_ctime
         }
 
-    def load_model(self, model_name: str, use_end2end: bool = True) -> bool:
+    def load_model(self, model_name: str, use_end2end: bool = True, device: Optional[str] = None, half: Optional[bool] = None) -> bool:
         """
         加载模型
 
         Args:
             model_name: 模型文件名
             use_end2end: 是否使用端到端推理（一对一头部）
+            device: 设备（如'cuda:0', 'cpu'），为None时使用默认设备
+            half: 是否使用半精度，为None时使用默认设置
 
         Returns:
             是否加载成功
@@ -88,35 +108,48 @@ class ModelManager:
                 model_info = self.models[model_name]
                 model_path = model_info["path"]
 
-                print(f"🔄 加载模型: {model_name} ({model_info['type']})")
+                # 确定设备
+                target_device = device if device is not None else self.default_device
+                target_half = half if half is not None else self.default_half
+
+                print(f"加载模型: {model_name} ({model_info['type']})")
+                print(f"  设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
 
                 # 加载YOLO26模型
                 # YOLO26支持end2end参数控制是否使用一对一头部
+                # 注意：YOLO的device参数可以是字符串或torch.device对象
                 self.model_instance = YOLO(model_path)
 
                 # 设置模型配置
                 if model_info["type"] == ModelType.PYTORCH.value:
-                    # PyTorch模型可以设置end2end参数
-                    # 注意：YOLO26的具体API可能需要调整
-                    pass
+                    # PyTorch模型可以设置device和half
+                    # 注意：YOLO模型在加载后可以通过to()方法移动设备
+                    if target_device.startswith('cuda'):
+                        self.model_instance.to(target_device)
+                        if target_half:
+                            self.model_instance.half()
+                    elif target_device == 'cpu':
+                        self.model_instance.to('cpu')
+                        if target_half:
+                            print("CPU不支持半精度推理，将使用全精度")
                 elif model_info["type"] == ModelType.ONNX.value:
                     # ONNX模型需要不同的加载方式
                     pass
 
                 self.current_model = model_name
                 self.use_end2end = use_end2end  # 存储端到端设置
-                print(f"✅ 模型加载成功: {model_name}, 端到端推理: {use_end2end}")
+                print(f"模型加载成功: {model_name}, 设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
 
                 return True
 
             except Exception as e:
-                print(f"❌ 模型加载失败: {model_name}, 错误: {e}")
+                print(f"模型加载失败: {model_name}, 错误: {e}")
                 raise
 
     def switch_model(self, model_name: str, use_end2end: Optional[bool] = None) -> bool:
         """切换到指定模型"""
         if model_name == self.current_model:
-            print(f"ℹ️ 模型已是当前模型: {model_name}")
+            print(f"模型切换为: {model_name}")
             return True
 
         try:
@@ -126,10 +159,10 @@ class ModelManager:
 
             success = self.load_model(model_name, use_end2end=use_end2end)
             if success:
-                print(f"🔄 模型切换成功: {self.current_model} -> {model_name}, 端到端推理: {use_end2end}")
+                print(f"模型切换成功: {self.current_model} -> {model_name}, 端到端推理: {use_end2end}")
             return success
         except Exception as e:
-            print(f"❌ 模型切换失败: {e}")
+            print(f"模型切换失败: {e}")
             return False
 
     def unload_model(self):
@@ -137,7 +170,7 @@ class ModelManager:
         with self.model_lock:
             self.model_instance = None
             self.current_model = None
-            print("🗑️ 模型已卸载")
+            print("模型已卸载")
 
     def get_model_list(self) -> List[Dict[str, Any]]:
         """获取模型列表"""
@@ -161,12 +194,14 @@ class ModelManager:
         info["loaded_at"] = time.time()
         return info
 
-    def predict(self, image, **kwargs):
+    def predict(self, image, device: Optional[str] = None, half: Optional[bool] = None, **kwargs):
         """
         使用当前模型进行预测
 
         Args:
             image: 输入图像
+            device: 设备（如'cuda:0', 'cpu'），为None时使用默认设备
+            half: 是否使用半精度，为None时使用默认设置
             **kwargs: 传递给YOLO的额外参数
 
         Returns:
@@ -175,7 +210,6 @@ class ModelManager:
         if not self.model_instance:
             raise RuntimeError("没有加载模型")
 
-        print(f"🔍 ModelManager.predict 被调用，图像形状: {image.shape}")
         with self.model_lock:
             # YOLO26推理
             # 使用end2end参数启用一对一头部（免NMS）
@@ -183,9 +217,24 @@ class ModelManager:
             inference_kwargs = kwargs.copy()
             end2end = inference_kwargs.pop('end2end', self.use_end2end)
 
-            print(f"🎯 开始YOLO推理，端到端模式: {end2end}, 参数: {inference_kwargs}")
-            results = self.model_instance(image, end2end=end2end, **inference_kwargs)
-            print(f"✅ YOLO推理完成，原始结果类型: {type(results)}")
+            # 确定推理设备
+            target_device = device if device is not None else self.default_device
+            target_half = half if half is not None else self.default_half
+
+            # 如果是摄像头推理，使用摄像头专用配置
+            is_camera_inference = inference_kwargs.pop('camera_mode', False)
+            if is_camera_inference:
+                target_device = self.camera_device
+                target_half = self.camera_half
+
+            # 准备YOLO推理参数
+            yolo_kwargs = inference_kwargs.copy()
+            yolo_kwargs['end2end'] = end2end
+            yolo_kwargs['device'] = target_device
+            if target_half:
+                yolo_kwargs['half'] = target_half
+
+            results = self.model_instance(image, **yolo_kwargs)
 
             # 处理结果
             processed_results = []
@@ -207,4 +256,4 @@ class ModelManager:
     def cleanup(self):
         """清理资源"""
         self.unload_model()
-        print("🧹 模型管理器清理完成")
+        print("模型管理器清理完成")

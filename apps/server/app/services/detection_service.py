@@ -1,10 +1,16 @@
 """
 检测服务 - 处理图片、视频和摄像头流的推理
 """
+import sys
+from pathlib import Path
+# 添加ai-engine包到Python路径
+project_root = Path(__file__).parent.parent.parent.parent.parent
+ai_engine_path = project_root / "packages" / "ai-engine"
+sys.path.insert(0, str(ai_engine_path))
+
 import asyncio
 import cv2
 import numpy as np
-from pathlib import Path
 from typing import List, Dict, Any, Optional, Generator
 import tempfile
 import time
@@ -145,26 +151,40 @@ class DetectionService:
         try:
             start_time = time.time()
 
-            # 检测 - 使用真实推理
+            # 检测 - 使用真实推理，摄像头模式启用GPU和半精度
+            predict_start = time.time()
             detections = self.model_manager.predict(
                 frame_data,
                 conf=settings.CONFIDENCE_THRESHOLD,
                 iou=settings.IOU_THRESHOLD,
                 max_det=settings.MAX_DETECTIONS,
-                verbose=False
+                verbose=False,
+                camera_mode=True  # 启用摄像头推理模式（使用GPU和半精度）
             )
+            predict_time = (time.time() - predict_start) * 1000
+
+            risks_start = time.time()
             risks = await self._apply_risk_rules(detections)
+            risk_time = (time.time() - risks_start) * 1000
 
             inference_time = (time.time() - start_time) * 1000
 
             # 标注图像
+            annotate_start = time.time()
             annotated_frame = await self._annotate_image(frame_data, detections)
+            annotate_time = (time.time() - annotate_start) * 1000
+
+            total_time = (time.time() - start_time) * 1000
 
             return {
                 "success": True,
                 "detections": detections,
                 "risks": risks,
                 "inference_time": inference_time,
+                "predict_time_ms": predict_time,
+                "risk_time_ms": risk_time,
+                "annotate_time_ms": annotate_time,
+                "total_time_ms": total_time,
                 "frame_size": {"width": frame_data.shape[1], "height": frame_data.shape[0]},
                 "annotated_frame": annotated_frame
             }
