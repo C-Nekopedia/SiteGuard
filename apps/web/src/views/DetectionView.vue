@@ -24,9 +24,6 @@
           <button class="tab" :class="{ active: activeInputType === 'image' }" @click="switchInputType('image')">
             本地图片
           </button>
-          <button class="tab" :class="{ active: activeInputType === 'video' }" @click="switchInputType('video')">
-            视频文件
-          </button>
         </div>
       </header>
 
@@ -46,27 +43,6 @@
               <p style="margin: 0; font-weight: 600;">点击或将图片拖拽至此处</p>
               <p style="margin: 4px 0 0; font-size: 0.8rem;">支持 JPG, PNG 格式进行单张识别</p>
               <input ref="imageInput" type="file" accept="image/*" @change="handleImageUpload" style="display: none" />
-            </div>
-
-            <!-- 视频上传区域 -->
-            <div v-if="activeInputType === 'video' && !currentVideoUrl" class="upload-placeholder"
-              @click="triggerVideoUpload">
-              <div class="upload-icon">
-                <el-icon>
-                  <VideoCamera />
-                </el-icon>
-              </div>
-              <p style="margin: 0; font-weight: 600;">点击上传视频文件</p>
-              <p style="margin: 4px 0 0; font-size: 0.8rem;">支持 MP4, AVI 格式进行抽帧分析</p>
-              <input ref="videoInput" type="file" accept="video/*" @change="handleVideoUpload" style="display: none" />
-            </div>
-
-            <!-- 视频预览区域 -->
-            <div v-if="activeInputType === 'video' && currentVideoUrl" class="video-preview">
-              <video :src="currentVideoUrl" controls class="preview-video" />
-              <p style="margin-top: 12px; color: #94A3B8; font-size: 0.9rem;">
-                视频已加载，点击"开始检测"进行分析
-              </p>
             </div>
 
             <!-- 摄像头区域 -->
@@ -250,9 +226,7 @@ import { ElMessage } from 'element-plus'
 const activeInputType = ref('image')
 const selectedModel = ref('yolo26n_ppe')
 const currentImageUrl = ref('')
-const currentVideoUrl = ref('')
 const currentImageFile = ref<File | null>(null)
-const currentVideoFile = ref<File | null>(null)
 const detections = ref<any[]>([])
 const activeRisks = ref<any[]>([])
 const inferenceLatency = ref(0)
@@ -267,13 +241,11 @@ const detectionHistory = ref<any[]>([])
 // 摄像头流相关状态
 const cameraStreamUrl = ref<string>('')
 const cameraWebSocket = ref<WebSocket | null>(null)
-const frameCount = ref(0)
 const lastFrameTime = ref<number>(0)
 const frameTimes = ref<number[]>([])
 
 // Refs
 const imageInput = ref<HTMLInputElement>()
-const videoInput = ref<HTMLInputElement>()
 
 // API配置
 const API_BASE = '/api/v1'
@@ -287,7 +259,6 @@ const selectedModelLabel = computed(() => {
 const canStartDetection = computed(() => {
   if (detectionLoading.value) return false
   if (activeInputType.value === 'image' && currentImageUrl.value) return true
-  if (activeInputType.value === 'video' && currentVideoUrl.value) return true
   // 摄像头实时检测自动进行，不需要手动开始
   if (activeInputType.value === 'camera') return false
   return false
@@ -331,10 +302,6 @@ const switchInputType = (type: string) => {
     URL.revokeObjectURL(currentImageUrl.value)
     currentImageUrl.value = ''
     currentImageFile.value = null
-  } else if (activeInputType.value === 'video' && currentVideoUrl.value) {
-    URL.revokeObjectURL(currentVideoUrl.value)
-    currentVideoUrl.value = ''
-    currentVideoFile.value = null
   }
 
   activeInputType.value = type
@@ -346,10 +313,6 @@ const switchInputType = (type: string) => {
 
 const triggerImageUpload = () => {
   imageInput.value?.click()
-}
-
-const triggerVideoUpload = () => {
-  videoInput.value?.click()
 }
 
 const handleDragOver = (event: DragEvent) => {
@@ -402,32 +365,12 @@ const handleImageUpload = async (event: Event) => {
   ElMessage.success('图片已加载，点击"开始检测"进行分析')
 }
 
-const handleVideoUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  if (!input.files?.length) return
-
-  const file = input.files[0]
-  if (file.size > 100 * 1024 * 1024) {
-    ElMessage.error('文件大小不能超过 100MB')
-    return
-  }
-
-  // 撤销之前的URL
-  if (currentVideoUrl.value) {
-    URL.revokeObjectURL(currentVideoUrl.value)
-  }
-  currentVideoUrl.value = URL.createObjectURL(file)
-  currentVideoFile.value = file
-  ElMessage.success('视频已加载，点击"开始检测"进行分析')
-}
-
 const toggleCamera = () => {
   if (isCameraActive.value) {
     disconnectCameraWebSocket()
     isCameraActive.value = false
     cameraStreamUrl.value = ''
     fps.value = 0
-    frameCount.value = 0
     frameTimes.value = []
     ElMessage.success('摄像头已停止')
   } else {
@@ -497,7 +440,6 @@ const connectCameraWebSocket = () => {
           }
 
           // 计算FPS
-          frameCount.value++
           const now = Date.now()
           const frameTime = now - lastFrameTime.value
           lastFrameTime.value = now
@@ -564,12 +506,6 @@ const startDetection = async () => {
   try {
     if (activeInputType.value === 'image') {
       await detectImage()
-    } else if (activeInputType.value === 'video') {
-      // 视频检测逻辑
-      ElMessage.info('视频检测功能开发中...')
-    } else if (activeInputType.value === 'camera') {
-      // 摄像头实时检测自动进行
-      ElMessage.info('摄像头正在实时检测中...')
     }
   } catch (error) {
     ElMessage.error(`检测失败: ${error}`)
@@ -648,14 +584,9 @@ const clearResult = () => {
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
-  if (currentVideoUrl.value) {
-    URL.revokeObjectURL(currentVideoUrl.value)
-  }
 
   currentImageUrl.value = ''
-  currentVideoUrl.value = ''
   currentImageFile.value = null
-  currentVideoFile.value = null
   detections.value = []
   activeRisks.value = []
   detectionCount.value = 0
@@ -682,9 +613,6 @@ const sortDetections = (detections: any[]) => {
     return 0
   })
 }
-
-
-// 计算图片在容器中的实际显示区域（考虑 object-fit: contain）
 
 
 const loadModels = async () => {
@@ -718,9 +646,6 @@ onUnmounted(() => {
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
-  if (currentVideoUrl.value) {
-    URL.revokeObjectURL(currentVideoUrl.value)
-  }
   // 清理摄像头资源
   disconnectCameraWebSocket()
 })
@@ -752,19 +677,6 @@ html, body {
 </style>
 
 <style scoped>
-:root {
-  --brand-color: #4F46E5;
-  --bg-main: #F8FAFC;
-  --card-bg: #FFFFFF;
-  --text-title: #1E293B;
-  --text-body: #64748B;
-  --danger: #EF4444;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --border: #CBD5E1;
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
 * {
   transition: all 0.2s ease;
 }
@@ -1010,25 +922,6 @@ html, body {
   text-align: center;
   color: #94A3B8;
   padding: 40px;
-}
-
-/* 视频预览区域 */
-.video-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.preview-video {
-  max-width: 100%;
-  max-height: 80%;
-  object-fit: contain;
-  border-radius: 8px;
-  background: #000;
 }
 
 /* 检测结果显示 */

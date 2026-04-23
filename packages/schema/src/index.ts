@@ -77,15 +77,8 @@ export interface ModelStats {
 // ==================== 输入源相关 ====================
 export enum InputType {
   IMAGE = 'image',
-  VIDEO = 'video',
   CAMERA = 'camera',
   RTSP = 'rtsp'
-}
-
-export interface VideoProcessingConfig {
-  frameRate: number;
-  maxFrameQueueSize: number;
-  outputFormat: string;
 }
 
 // ==================== API 请求/响应 ====================
@@ -102,20 +95,6 @@ export interface ImageDetectionResponse {
   inferenceTime: number;
   annotatedImageUrl: string;
   imageInfo: Size;
-}
-
-export interface VideoDetectionRequest {
-  video: File | Blob;
-  modelName?: string;
-  processConfig?: VideoProcessingConfig;
-}
-
-export interface VideoFrameResult {
-  frameIndex: number;
-  detections: Detection[];
-  risks: Risk[];
-  progress: number;
-  timestamp: string;
 }
 
 export interface CameraStreamConfig {
@@ -182,13 +161,10 @@ export interface PerformanceStats {
 export interface AppConfig {
   maxUploadSize: number;
   allowedImageTypes: string[];
-  allowedVideoTypes: string[];
   defaultModel: string;
   confidenceThreshold: number;
   iouThreshold: number;
   maxDetections: number;
-  videoFrameRate: number;
-  maxFrameQueueSize: number;
 }
 
 // ==================== 工具函数 ====================
@@ -243,11 +219,8 @@ export const CONSTRUCTION_PPE_CLASSES = {
 export const DEFAULT_CONFIG: AppConfig = {
   maxUploadSize: 20 * 1024 * 1024, // 20MB
   allowedImageTypes: ['image/jpeg', 'image/png', 'image/jpg'],
-  allowedVideoTypes: ['video/mp4', 'video/avi'],
   defaultModel: 'yolo26n_ppe.pt',
   confidenceThreshold: 0.5,
   iouThreshold: 0.5,
-  maxDetections: 300,
-  videoFrameRate: 2,
-  maxFrameQueueSize: 2
+  maxDetections: 300
 };

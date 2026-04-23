@@ -3,9 +3,8 @@
 """
 import os
 from pathlib import Path
-from pydantic import Field, field_validator, ValidationInfo
+from pydantic import field_validator, ValidationInfo
 from pydantic_settings import BaseSettings
-from typing import List, Optional
 
 class Settings(BaseSettings):
     """应用设置"""
@@ -18,8 +17,7 @@ class Settings(BaseSettings):
 
     # 文件上传配置
     MAX_UPLOAD_SIZE: int = 20 * 1024 * 1024  # 20MB
-    ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/jpg"]
-    ALLOWED_VIDEO_TYPES: List[str] = ["video/mp4", "video/avi"]
+    ALLOWED_IMAGE_TYPES: list[str] = ["image/jpeg", "image/png", "image/jpg"]
 
     # 路径配置
     # 可以通过环境变量 SITEGUARD_BASE_DIR 覆盖
@@ -38,10 +36,6 @@ class Settings(BaseSettings):
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.5
     MAX_DETECTIONS: int = 300  # YOLO26一对一头部最大检测数
-
-    # 视频处理配置
-    VIDEO_FRAME_RATE: int = 2  # 每秒抽帧数
-    MAX_FRAME_QUEUE_SIZE: int = 2
 
     # 风险规则配置
     RULES_DIR: Path = BASE_DIR / "packages" / "ai-engine" / "ai_engine" / "rules"
@@ -95,9 +89,6 @@ def validate_paths() -> tuple[bool, list[str]]:
     验证关键路径配置。
     返回：(是否成功, 问题消息列表)
     """
-    import os
-    from pathlib import Path
-
     problems = []
 
     # 需要验证的目录

@@ -5,6 +5,7 @@ SiteGuard AI Server - FastAPI 主应用
 
 import sys
 from pathlib import Path
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -124,7 +125,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "healthy", "timestamp": "2024-01-15T10:00:00Z"}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 if __name__ == "__main__":
     # 根据运行方式动态选择模块名

@@ -3,9 +3,8 @@ YOLO26推理引擎
 """
 import time
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass
-from pathlib import Path
 
 from ..model.model_manager import ModelManager
 

@@ -6,7 +6,6 @@ pydantic-settings==2.1.0
 numpy<2,>=1.24.3
 opencv-python==4.8.1.78
 ultralytics>=8.4.0
-watchdog==3.0.0
 python-dotenv==1.0.0
 aiofiles==23.2.1
 pyyaml>=6.0  # YAML support for configuration files

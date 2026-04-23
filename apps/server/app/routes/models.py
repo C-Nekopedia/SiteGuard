@@ -1,9 +1,8 @@
 """
 模型管理路由
 """
-from typing import List
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse
 
 from ..core.config import settings
 from ..utils.logger import setup_logger
@@ -80,7 +79,7 @@ async def switch_model(request: Request, model_name: str, use_end2end: bool = No
             "message": f"已切换模型到 {model_name}",
             "model_name": model_name,
             "use_end2end": model_manager.use_end2end if hasattr(model_manager, 'use_end2end') else True,
-            "timestamp": "2024-01-15T10:00:00Z"
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except HTTPException:
@@ -105,7 +104,7 @@ async def get_current_model():
                 "display_name": model_path.stem.replace("_", " ").title(),
                 "type": "pytorch" if model_name.endswith(".pt") else "onnx",
                 "size": model_path.stat().st_size,
-                "loaded_at": "2024-01-15T09:00:00Z"
+                "loaded_at": datetime.now(timezone.utc).isoformat()
             }
         else:
             # 如果默认模型不存在，返回第一个找到的模型
@@ -120,7 +119,7 @@ async def get_current_model():
                     "display_name": model_path.stem.replace("_", " ").title(),
                     "type": "pytorch" if model_path.suffix == ".pt" else "onnx",
                     "size": model_path.stat().st_size,
-                    "loaded_at": "2024-01-15T09:00:00Z"
+                    "loaded_at": datetime.now(timezone.utc).isoformat()
                 }
             else:
                 model_info = None

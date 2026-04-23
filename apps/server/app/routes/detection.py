@@ -1,12 +1,10 @@
 """
 检测相关路由
 """
-import io
 import uuid
 from pathlib import Path
-from typing import List
+from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends, Request
-from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..core.config import settings
 from ..services.detection_service import DetectionService
@@ -86,63 +84,6 @@ async def detect_image(
         logger.error(f"图片检测接口异常: {e}")
         raise HTTPException(status_code=500, detail=f"内部服务器错误: {str(e)}")
 
-@router.post("/video")
-async def detect_video(
-    request: Request,
-    file: UploadFile = File(...),
-    detection_service: DetectionService = Depends(get_detection_service)
-):
-    """
-    视频检测接口（返回SSE流）
-    """
-    try:
-        # 验证文件类型
-        if file.content_type not in settings.ALLOWED_VIDEO_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型，仅支持: {', '.join(settings.ALLOWED_VIDEO_TYPES)}"
-            )
-
-        # 保存临时文件
-        temp_dir = Path("temp")
-        temp_dir.mkdir(exist_ok=True)
-
-        temp_file_path = temp_dir / f"{uuid.uuid4()}_{file.filename}"
-        with open(temp_file_path, "wb") as f:
-            contents = await file.read()
-            f.write(contents)
-
-        logger.info(f"收到视频检测请求: {file.filename}, 大小: {len(contents)} bytes")
-
-        # 定义SSE流生成器
-        async def generate_sse():
-            try:
-                async for frame_result in detection_service.detect_video(temp_file_path):
-                    yield f"data: {frame_result}\n\n"
-            finally:
-                # 清理临时文件
-                try:
-                    temp_file_path.unlink()
-                    logger.info(f"清理临时视频文件: {temp_file_path}")
-                except Exception as e:
-                    logger.error(f"清理临时文件失败: {e}")
-
-        return StreamingResponse(
-            generate_sse(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"
-            }
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"视频检测接口异常: {e}")
-        raise HTTPException(status_code=500, detail=f"内部服务器错误: {str(e)}")
-
 @router.get("/test")
 async def test_detection(
     detection_service: DetectionService = Depends(get_detection_service)
@@ -152,10 +93,9 @@ async def test_detection(
     """
     return {
         "message": "检测接口正常",
-        "timestamp": "2024-01-15T10:00:00Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
-            "POST /image": "图片检测",
-            "POST /video": "视频检测（SSE流）"
+            "POST /image": "图片检测"
         }
     }
 

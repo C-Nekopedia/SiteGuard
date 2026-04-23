@@ -1,7 +1,6 @@
 """
 模型管理器 - 管理YOLO26模型加载和切换
 """
-import os
 import time
 import threading
 import torch

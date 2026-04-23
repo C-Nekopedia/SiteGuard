@@ -1,18 +1,10 @@
 """
 检测服务 - 处理图片、视频和摄像头流的推理
 """
-import sys
-from pathlib import Path
-# 添加ai-engine包到Python路径
-project_root = Path(__file__).parent.parent.parent.parent.parent
-ai_engine_path = project_root / "packages" / "ai-engine"
-sys.path.insert(0, str(ai_engine_path))
-
 import asyncio
 import cv2
 import numpy as np
-from typing import List, Dict, Any, Optional, Generator
-import tempfile
+from typing import List, Dict, Any
 import time
 
 from ..core.config import settings
@@ -83,66 +75,6 @@ class DetectionService:
                 "success": False,
                 "error": str(e)
             }
-
-    async def detect_video(self, video_path: Path) -> Generator[Dict[str, Any], None, None]:
-        """
-        检测视频文件（逐帧）
-        """
-        cap = None
-        try:
-            cap = cv2.VideoCapture(str(video_path))
-            if not cap.isOpened():
-                raise ValueError(f"无法打开视频文件: {video_path}")
-
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-            logger.info(f"🎬 开始处理视频: {video_path.name}, FPS: {fps}, 总帧数: {total_frames}")
-
-            frame_count = 0
-            processed_frames = 0
-
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                frame_count += 1
-
-                # 抽帧处理
-                if frame_count % int(fps / settings.VIDEO_FRAME_RATE) == 0:
-                    try:
-                        # 检测当前帧 - 使用真实推理
-                        detections = self.model_manager.predict(
-                            frame,
-                            conf=settings.CONFIDENCE_THRESHOLD,
-                            iou=settings.IOU_THRESHOLD,
-                            max_det=settings.MAX_DETECTIONS,
-                            verbose=False
-                        )
-                        risks = await self._apply_risk_rules(detections)
-
-                        yield {
-                            "frame_index": frame_count,
-                            "detections": detections,
-                            "risks": risks,
-                            "progress": frame_count / total_frames
-                        }
-
-                        processed_frames += 1
-
-                    except Exception as e:
-                        logger.error(f"视频帧检测失败: {e}")
-
-                # 避免处理过快
-                await asyncio.sleep(0.01)
-
-            logger.info(f"✅ 视频处理完成，处理了 {processed_frames} 帧")
-
-        finally:
-            if cap:
-                cap.release()
-                logger.debug("📹 视频资源已释放")
 
     async def process_camera_frame(self, frame_data: np.ndarray) -> Dict[str, Any]:
         """

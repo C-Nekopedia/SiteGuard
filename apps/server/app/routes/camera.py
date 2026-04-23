@@ -3,11 +3,12 @@
 """
 import asyncio
 import base64
+import traceback
 import cv2
 import numpy as np
+from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Depends
-from fastapi.responses import JSONResponse
 
 from ..services.detection_service import DetectionService
 from ..utils.logger import setup_logger
@@ -96,7 +97,6 @@ class ConnectionManager:
                 return False
 
             self.camera_active = True
-            self.test_mode = False
             logger.info(f"摄像头已启动 (ID: {camera_id})")
             return True
 
@@ -144,7 +144,7 @@ async def camera_stream(
         await websocket.send_json({
             "type": "connected",
             "message": "WebSocket连接成功",
-            "timestamp": "2024-01-15T10:00:00Z"
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
         logger.error(f"发送连接成功消息失败: {e}")
@@ -211,7 +211,7 @@ async def camera_stream(
                     "detections": detection_result["detections"],
                     "risks": detection_result["risks"],
                     "inference_time": detection_result["inference_time"],
-                    "timestamp": "2024-01-15T10:00:00Z"
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             else:
                 message = {
@@ -222,7 +222,6 @@ async def camera_stream(
                 await websocket.send_json(message)
             except Exception as e:
                 logger.error(f"发送WebSocket数据失败: {e}")
-                import traceback
                 logger.error(f"错误详情: {traceback.format_exc()}")
                 break
 
@@ -243,7 +242,7 @@ async def camera_status(manager: ConnectionManager = Depends(get_connection_mana
     return {
         "camera_active": manager.camera_active,
         "active_connections": len(manager.active_connections),
-        "timestamp": "2024-01-15T10:00:00Z"
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @router.post("/start")

@@ -1,6 +1,7 @@
 """
 风险规则引擎
 """
+from datetime import datetime, timezone
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -277,7 +278,7 @@ class RuleEngine:
         """导出规则到YAML文件"""
         export_data = {
             "rules": self.rules,
-            "exported_at": "2024-01-15T10:00:00Z",
+            "exported_at": datetime.now(timezone.utc).isoformat(),
             "total_rules": len(self.rules)
         }
 
