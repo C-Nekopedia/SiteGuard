@@ -1,6 +1,7 @@
 """
 模型管理器 - 管理YOLO26模型加载和切换
 """
+import logging
 import time
 import threading
 import torch
@@ -9,6 +10,8 @@ from typing import Dict, List, Optional, Any
 from enum import Enum
 
 from ultralytics import YOLO
+
+logger = logging.getLogger(__name__)
 
 class ModelType(Enum):
     """模型类型"""
@@ -37,12 +40,12 @@ class ModelManager:
         """检测默认设备"""
         if torch.cuda.is_available():
             device_count = torch.cuda.device_count()
-            print(f"检测到 {device_count} 个CUDA设备:")
+            logger.info(f"检测到 {device_count} 个CUDA设备:")
             for i in range(device_count):
-                print(f"  - GPU {i}: {torch.cuda.get_device_name(i)}")
+                logger.info(f"  - GPU {i}: {torch.cuda.get_device_name(i)}")
             return "cuda:0"
         else:
-            print("未检测到CUDA设备，将使用CPU")
+            logger.info("未检测到CUDA设备，将使用CPU")
             return "cpu"
 
     def initialize(self):
@@ -111,8 +114,8 @@ class ModelManager:
                 target_device = device if device is not None else self.default_device
                 target_half = half if half is not None else self.default_half
 
-                print(f"加载模型: {model_name} ({model_info['type']})")
-                print(f"  设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
+                logger.info(f"加载模型: {model_name} ({model_info['type']})")
+                logger.info(f"  设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
 
                 # 加载YOLO26模型
                 # YOLO26支持end2end参数控制是否使用一对一头部
@@ -130,25 +133,25 @@ class ModelManager:
                     elif target_device == 'cpu':
                         self.model_instance.to('cpu')
                         if target_half:
-                            print("CPU不支持半精度推理，将使用全精度")
+                            logger.warning("CPU不支持半精度推理，将使用全精度")
                 elif model_info["type"] == ModelType.ONNX.value:
                     # ONNX模型需要不同的加载方式
                     pass
 
                 self.current_model = model_name
                 self.use_end2end = use_end2end  # 存储端到端设置
-                print(f"模型加载成功: {model_name}, 设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
+                logger.info(f"模型加载成功: {model_name}, 设备: {target_device}, 半精度: {target_half}, 端到端推理: {use_end2end}")
 
                 return True
 
             except Exception as e:
-                print(f"模型加载失败: {model_name}, 错误: {e}")
+                logger.error(f"模型加载失败: {model_name}, 错误: {e}")
                 raise
 
     def switch_model(self, model_name: str, use_end2end: Optional[bool] = None) -> bool:
         """切换到指定模型"""
         if model_name == self.current_model:
-            print(f"模型切换为: {model_name}")
+            logger.info(f"模型切换为: {model_name}")
             return True
 
         try:
@@ -158,10 +161,10 @@ class ModelManager:
 
             success = self.load_model(model_name, use_end2end=use_end2end)
             if success:
-                print(f"模型切换成功: {self.current_model} -> {model_name}, 端到端推理: {use_end2end}")
+                logger.info(f"模型切换成功: {self.current_model} -> {model_name}, 端到端推理: {use_end2end}")
             return success
         except Exception as e:
-            print(f"模型切换失败: {e}")
+            logger.error(f"模型切换失败: {e}")
             return False
 
     def unload_model(self):
@@ -169,7 +172,7 @@ class ModelManager:
         with self.model_lock:
             self.model_instance = None
             self.current_model = None
-            print("模型已卸载")
+            logger.info("模型已卸载")
 
     def get_model_list(self) -> List[Dict[str, Any]]:
         """获取模型列表"""
@@ -255,4 +258,4 @@ class ModelManager:
     def cleanup(self):
         """清理资源"""
         self.unload_model()
-        print("模型管理器清理完成")
+        logger.info("模型管理器清理完成")

@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from .routes import detection, models, camera
 from .core.config import settings, validate_paths
 from .utils.logger import setup_logger
 
@@ -21,9 +20,11 @@ current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
 # 添加ai-engine包到Python路径
-project_root = Path(__file__).parent.parent.parent.parent.parent
+project_root = Path(__file__).parent.parent.parent.parent
 ai_engine_path = project_root / "packages" / "ai-engine"
 sys.path.insert(0, str(ai_engine_path))
+
+from .routes import detection, models, camera
 
 # 导入AI引擎模块
 from ai_engine.model.model_manager import ModelManager
