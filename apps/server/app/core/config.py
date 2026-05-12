@@ -1,5 +1,5 @@
 """
-应用配置
+Application configuration
 """
 import os
 from pathlib import Path
@@ -7,46 +7,46 @@ from pydantic import field_validator, ValidationInfo
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    """应用设置"""
+    """Application settings"""
 
-    # 基础配置
+    # Basic configuration
     APP_NAME: str = "SiteGuard AI"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True
 
-    # 文件上传配置
+    # File upload configuration
     MAX_UPLOAD_SIZE: int = 20 * 1024 * 1024  # 20MB
     ALLOWED_IMAGE_TYPES: list[str] = ["image/jpeg", "image/png", "image/jpg"]
 
-    # 路径配置
-    # 可以通过环境变量 SITEGUARD_BASE_DIR 覆盖，默认向上查找5级（从 config.py 到项目根目录）
+    # Path configuration
+    # Override via SITEGUARD_BASE_DIR env var; defaults to 5 levels up from config.py to project root
     _BASE_DIR_FALLBACK: Path = Path(__file__).resolve().parent.parent.parent.parent.parent
     BASE_DIR: Path = Path(os.environ.get("SITEGUARD_BASE_DIR", str(_BASE_DIR_FALLBACK)))
-    # 模型目录，环境变量：MODELS_DIR
+    # Model directory, env var: MODELS_DIR
     MODELS_DIR: Path = BASE_DIR / "data" / "models"
-    # 数据目录，环境变量：DATA_DIR
+    # Data directory, env var: DATA_DIR
     DATA_DIR: Path = BASE_DIR / "data" / "raw"
-    # 静态文件目录，环境变量：STATIC_DIR
+    # Static files directory, env var: STATIC_DIR
     STATIC_DIR: Path = BASE_DIR / "apps" / "server" / "static"
-    # 导出目录，环境变量：EXPORTS_DIR
+    # Export directory, env var: EXPORTS_DIR
     EXPORTS_DIR: Path = BASE_DIR / "apps" / "server" / "exports"
 
-    # AI配置
+    # AI configuration
     DEFAULT_MODEL: str = "yolo26n_ppe.pt"
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.5
-    MAX_DETECTIONS: int = 300  # YOLO26一对一头部最大检测数
+    MAX_DETECTIONS: int = 300  # YOLO26 one-to-one head max detections
 
-    # CORS配置
+    # CORS configuration
     CORS_ORIGINS: str = "http://localhost:3000"
 
-    # 摄像头配置
+    # Camera configuration
     CAMERA_FRAME_WIDTH: int = 480
     CAMERA_FRAME_HEIGHT: int = 360
     CAMERA_JPEG_QUALITY: int = 50
 
-    # 临时文件清理延迟（秒）
+    # Temp file cleanup delay (seconds)
     TEMP_FILE_CLEANUP_DELAY: int = 3600
 
     @property
@@ -60,30 +60,29 @@ class Settings(BaseSettings):
     @classmethod
     def resolve_relative_paths(cls, v: Path, info: ValidationInfo) -> Path:
         """
-        解析相对路径：如果路径是相对的，则相对于BASE_DIR解析。
-        环境变量可以设置绝对路径或相对于BASE_DIR的相对路径。
+        Resolve relative paths: if a path is relative, resolve it against BASE_DIR.
+        Environment variables can set absolute paths or paths relative to BASE_DIR.
         """
-        # 如果路径已经是绝对路径，直接返回
+        # If path is already absolute, return it directly
         if v.is_absolute():
             return v
 
-        # 获取BASE_DIR值
-        # 注意：由于验证顺序，BASE_DIR可能尚未验证
-        # 这里我们直接从数据中获取
+        # Get BASE_DIR value from validation data
+        # Note: due to validation order, BASE_DIR may not be validated yet
         data = info.data
         if data and "BASE_DIR" in data:
             base_dir = data["BASE_DIR"]
             if isinstance(base_dir, Path):
                 return base_dir / v
-        # 如果无法获取BASE_DIR，返回相对路径（相对于当前工作目录）
+        # Fallback: return relative to current working directory
         return v
 
     @field_validator("BASE_DIR", mode="after")
     @classmethod
     def ensure_absolute_path(cls, v: Path) -> Path:
-        """确保BASE_DIR是绝对路径"""
+        """Ensure BASE_DIR is an absolute path"""
         if not v.is_absolute():
-            # 如果提供的是相对路径，转换为绝对路径（相对于当前工作目录）
+            # Convert relative path to absolute (relative to current working directory)
             return v.resolve()
         return v
 
@@ -93,38 +92,36 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# 创建必要的目录
+# Create required directories
 for directory in [settings.MODELS_DIR, settings.DATA_DIR, settings.STATIC_DIR, settings.EXPORTS_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 def validate_paths() -> tuple[bool, list[str]]:
     """
-    验证关键路径配置。
-    返回：(是否成功, 问题消息列表)
+    Validate critical path configuration.
+    Returns: (success, list of problem messages)
     """
     problems = []
 
-    # 需要验证的目录
+    # Directories to validate
     critical_dirs = [
-        ("MODELS_DIR", settings.MODELS_DIR, True, "模型目录"),
-        ("DATA_DIR", settings.DATA_DIR, False, "数据目录"),  # 不一定需要存在
-        ("STATIC_DIR", settings.STATIC_DIR, True, "静态文件目录"),
-        ("EXPORTS_DIR", settings.EXPORTS_DIR, True, "导出目录"),
+        ("MODELS_DIR", settings.MODELS_DIR, True, "Model directory"),
+        ("DATA_DIR", settings.DATA_DIR, False, "Data directory"),
+        ("STATIC_DIR", settings.STATIC_DIR, True, "Static files directory"),
+        ("EXPORTS_DIR", settings.EXPORTS_DIR, True, "Export directory"),
     ]
 
     for name, path, must_exist, desc in critical_dirs:
         try:
             path = Path(path)
             if must_exist and not path.exists():
-                problems.append(f"{desc}不存在: {path}")
+                problems.append(f"{desc} does not exist: {path}")
             elif path.exists():
-                # 检查是否可读（对于目录）
                 if not os.access(path, os.R_OK):
-                    problems.append(f"{desc}不可读: {path}")
-                # 检查是否可写（对于需要写入的目录）
+                    problems.append(f"{desc} not readable: {path}")
                 if name in ["STATIC_DIR", "EXPORTS_DIR"] and not os.access(path, os.W_OK):
-                    problems.append(f"{desc}不可写: {path}")
+                    problems.append(f"{desc} not writable: {path}")
         except Exception as e:
-            problems.append(f"检查{desc}时出错: {e}")
+            problems.append(f"Error checking {desc}: {e}")
 
     return len(problems) == 0, problems

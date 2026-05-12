@@ -1,5 +1,5 @@
 """
-检测相关路由
+Detection routes
 """
 import asyncio
 import uuid
@@ -15,9 +15,9 @@ logger = setup_logger(__name__)
 
 router = APIRouter()
 
-# 依赖函数：获取检测服务
+# Dependency: get detection service
 def get_detection_service(request: Request) -> DetectionService:
-    """从应用状态获取检测服务"""
+    """Get detection service from app state"""
     return request.app.state.detection_service
 
 @router.post("/image")
@@ -28,45 +28,45 @@ async def detect_image(
     detection_service: DetectionService = Depends(get_detection_service)
 ):
     """
-    图片检测接口
+    Image detection endpoint
     """
     try:
-        # 验证文件类型
+        # Validate file type
         if file.content_type not in settings.ALLOWED_IMAGE_TYPES:
             raise HTTPException(
                 status_code=400,
-                detail=f"不支持的文件类型，仅支持: {', '.join(settings.ALLOWED_IMAGE_TYPES)}"
+                detail=f"Unsupported file type, only: {', '.join(settings.ALLOWED_IMAGE_TYPES)}"
             )
 
-        # 读取文件内容
+        # Read file content
         contents = await file.read()
 
-        # 验证文件大小
+        # Validate file size
         if len(contents) > settings.MAX_UPLOAD_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"文件大小不能超过 {settings.MAX_UPLOAD_SIZE // 1024 // 1024}MB"
+                detail=f"File size exceeds {settings.MAX_UPLOAD_SIZE // 1024 // 1024}MB limit"
             )
 
-        logger.info(f"收到图片检测请求: {file.filename}, 大小: {len(contents)} bytes")
+        logger.info(f"Image detection request received: {file.filename}, size: {len(contents)} bytes")
 
-        # 执行检测
+        # Run detection
         result = await detection_service.detect_image(contents)
 
         if not result["success"]:
-            raise HTTPException(status_code=500, detail=result.get("error", "检测失败"))
+            raise HTTPException(status_code=500, detail=result.get("error", "Detection failed"))
 
-        # 生成唯一文件名
+        # Generate unique filename
         file_id = str(uuid.uuid4())
         annotated_filename = f"{file_id}.jpg"
         annotated_path = settings.STATIC_DIR / "temp" / annotated_filename
 
-        # 保存标注图片
+        # Save annotated image
         annotated_path.parent.mkdir(parents=True, exist_ok=True)
         with open(annotated_path, "wb") as f:
             f.write(result["annotated_image"])
 
-        # 添加后台任务：清理临时文件
+        # Background task: cleanup temp file
         if background_tasks:
             background_tasks.add_task(cleanup_temp_file, annotated_path)
 
@@ -82,46 +82,46 @@ async def detect_image(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"图片检测接口异常: {e}")
-        raise HTTPException(status_code=500, detail=f"内部服务器错误: {str(e)}")
+        logger.error(f"Image detection endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/test")
 async def test_detection(
     detection_service: DetectionService = Depends(get_detection_service)
 ):
     """
-    测试检测接口
+    Test detection endpoint
     """
     return {
-        "message": "检测接口正常",
+        "message": "Detection endpoint OK",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
-            "POST /image": "图片检测"
+            "POST /image": "Image detection"
         }
     }
 
 async def cleanup_temp_file(file_path: Path):
     """
-    清理临时文件（后台任务）
+    Clean up temporary file (background task)
     """
     try:
         await asyncio.sleep(settings.TEMP_FILE_CLEANUP_DELAY)
 
-        # 正常执行清理
+        # Normal cleanup
         try:
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"后台清理临时文件: {file_path}")
+                logger.info(f"Background cleanup of temp file: {file_path}")
         except Exception as e:
-            logger.error(f"后台清理文件失败: {e}")
+            logger.error(f"Background cleanup failed: {e}")
 
     except asyncio.CancelledError:
-        # 当应用关闭时任务被取消，立即清理文件
-        logger.debug(f"后台任务被取消，立即清理临时文件: {file_path}")
+        # When app shuts down task is cancelled, clean up immediately
+        logger.debug(f"Background task cancelled, immediate cleanup: {file_path}")
         try:
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"应用关闭时清理临时文件: {file_path}")
+                logger.info(f"Shutdown cleanup of temp file: {file_path}")
         except Exception as e:
-            logger.error(f"清理临时文件失败: {e}")
-        # 安静地退出，不传播取消异常
+            logger.error(f"Cleanup failed: {e}")
+        # Silently exit, do not propagate cancellation

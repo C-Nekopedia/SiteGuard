@@ -1,15 +1,17 @@
 # SiteGuard Python Dependencies
-# 此文件是服务器和AI引擎的唯一依赖来源
+# This file is the single source of truth for server and AI engine dependencies
 
 # FastAPI backend dependencies
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-pydantic==2.5.0
-pydantic-settings==2.1.0
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
 
 # AI Engine dependencies
 ultralytics>=8.4.0
 numpy>=1.24.3,<2
-opencv-python==4.8.1.78
+opencv-python>=4.8.0
 PyYAML>=6.0
+watchdog>=3.0.0
+onnxruntime>=1.15.0

@@ -71,8 +71,8 @@ Thumbs.db
 # References (documentation and reference materials)
 References/
 
-# Scripts (temporary scripts)
-scripts/
+# Build artifacts only, not scripts
+scripts/__pycache__/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -90,7 +90,7 @@ apps/web/.env
 
 # Model files
 data/models/
-# 示例模型（除外）
+# Example model (included)
 !data/models/yolo26n_ppe.pt
 
 # Temporary files

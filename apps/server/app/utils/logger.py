@@ -1,5 +1,5 @@
 """
-日志配置
+Logging configuration
 """
 import logging
 import sys
@@ -8,8 +8,8 @@ from datetime import datetime
 
 def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     """
-    设置系统日志记录器（控制台 + 文件）
-    文件写入 logs/system/YYYY-MM-DD.log
+    Set up system logger (console + file).
+    File output: logs/system/YYYY-MM-DD.log
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -38,7 +38,7 @@ def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
 
 
 def setup_file_logger(name: str, subdir: str) -> logging.Logger:
-    """设置文件日志记录器，写入 logs/{subdir}/YYYY-MM-DD.log（仅文件）"""
+    """Set up file-only logger, output to logs/{subdir}/YYYY-MM-DD.log"""
     log_dir = Path("logs") / subdir
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -62,6 +62,6 @@ def setup_file_logger(name: str, subdir: str) -> logging.Logger:
     return logger
 
 
-# 向后兼容别名
+# Backward-compatible aliases
 setup_detection_logger = lambda: setup_file_logger("detection", "detection")
 setup_risk_logger = lambda: setup_file_logger("risk", "alerts")

@@ -1,5 +1,5 @@
 """
-摄像头相关路由
+Camera routes
 """
 import asyncio
 import base64
@@ -19,30 +19,30 @@ logger = setup_logger(__name__)
 
 router = APIRouter()
 
-# 依赖函数：获取检测服务
+# Dependency: get detection service
 def get_detection_service(request: Request) -> DetectionService:
-    """从应用状态获取检测服务"""
+    """Get detection service from app state"""
     return request.app.state.detection_service
 
-# 内部辅助函数：获取或创建连接管理器
+# Internal helper: get or create connection manager
 def _get_or_create_connection_manager(app) -> "ConnectionManager":
-    """从应用状态获取连接管理器，如果不存在则创建"""
+    """Get connection manager from app state, creating if needed"""
     if not hasattr(app.state, 'camera_connection_manager'):
         app.state.camera_connection_manager = ConnectionManager(app.state.detection_service)
     return app.state.camera_connection_manager
 
-# 依赖函数：获取或创建连接管理器（用于HTTP请求）
+# Dependency: get or create connection manager (for HTTP requests)
 def get_connection_manager(request: Request) -> "ConnectionManager":
-    """从应用状态获取连接管理器，如果不存在则创建"""
+    """Get connection manager from app state, creating if needed"""
     return _get_or_create_connection_manager(request.app)
 
-# 依赖函数：获取或创建连接管理器（用于WebSocket）
+# Dependency: get or create connection manager (for WebSocket)
 def get_connection_manager_for_websocket(websocket: WebSocket) -> "ConnectionManager":
-    """从应用状态获取连接管理器，如果不存在则创建（WebSocket版本）"""
+    """Get connection manager from app state, creating if needed (WebSocket version)"""
     return _get_or_create_connection_manager(websocket.app)
 
 class ConnectionManager:
-    """WebSocket连接管理器"""
+    """WebSocket connection manager"""
 
     def __init__(self, detection_service: DetectionService):
         self.detection_service = detection_service
@@ -51,82 +51,82 @@ class ConnectionManager:
         self.camera_instance = None
 
     async def connect(self, websocket: WebSocket):
-        """连接WebSocket"""
+        """Connect WebSocket"""
         await websocket.accept()
         self.active_connections.append(websocket)
-        logger.info(f"WebSocket连接建立，当前连接数: {len(self.active_connections)}")
+        logger.info(f"WebSocket connected, active connections: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
-        """断开WebSocket"""
+        """Disconnect WebSocket"""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-        logger.info(f"WebSocket连接断开，剩余连接数: {len(self.active_connections)}")
+        logger.info(f"WebSocket disconnected, remaining connections: {len(self.active_connections)}")
 
-        # 如果没有活跃连接，停止摄像头
+        # Stop camera if no active connections
         if not self.active_connections and self.camera_active:
             self.stop_camera()
 
     async def send_message(self, message: dict, websocket: WebSocket):
-        """发送消息到指定WebSocket"""
+        """Send message to a specific WebSocket"""
         try:
             await websocket.send_json(message)
         except Exception as e:
-            logger.error(f"发送WebSocket消息失败: {e}")
+            logger.error(f"Failed to send WebSocket message: {e}")
 
     async def broadcast(self, message: dict):
-        """广播消息到所有连接"""
+        """Broadcast message to all connections"""
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                logger.error(f"广播消息失败: {e}")
+                logger.error(f"Broadcast message failed: {e}")
 
     def start_camera(self, camera_id: int = 0):
-        """启动摄像头
+        """Start camera
 
         Args:
-            camera_id: 摄像头ID (0, 1, 2...)
+            camera_id: Camera ID (0, 1, 2...)
         """
         try:
             if self.camera_active:
-                logger.warning("摄像头已在运行中")
+                logger.warning("Camera is already running")
                 return False
 
-            # 打开物理摄像头
+            # Open physical camera
             self.camera_instance = cv2.VideoCapture(camera_id)
             if not self.camera_instance.isOpened():
-                logger.error(f"无法打开摄像头: {camera_id}")
+                logger.error(f"Cannot open camera: {camera_id}")
                 return False
 
             self.camera_active = True
-            logger.info(f"摄像头已启动 (ID: {camera_id})")
+            logger.info(f"Camera started (ID: {camera_id})")
             return True
 
         except Exception as e:
-            logger.error(f"启动摄像头失败: {e}")
+            logger.error(f"Failed to start camera: {e}")
             return False
 
     def stop_camera(self):
-        """停止摄像头"""
+        """Stop camera"""
         try:
             if self.camera_instance:
                 self.camera_instance.release()
                 self.camera_instance = None
 
             self.camera_active = False
-            logger.info("摄像头已停止")
+            logger.info("Camera stopped")
 
         except Exception as e:
-            logger.error(f"停止摄像头失败: {e}")
+            logger.error(f"Failed to stop camera: {e}")
 
     def read_frame(self):
-        """读取摄像头帧"""
+        """Read camera frame"""
         if not self.camera_active or not self.camera_instance:
             return None
 
         ret, frame = self.camera_instance.read()
         if not ret:
-            logger.error("读取摄像头帧失败")
+            logger.error("Failed to read camera frame")
             return None
 
         return frame
@@ -137,81 +137,81 @@ async def camera_stream(
     manager: ConnectionManager = Depends(get_connection_manager_for_websocket)
 ):
     """
-    WebSocket摄像头流
+    WebSocket camera stream
     """
     await manager.connect(websocket)
 
     loop = asyncio.get_event_loop()
 
-    # 立即发送连接成功消息
+    # Send connection success message immediately
     try:
         await websocket.send_json({
             "type": "connected",
-            "message": "WebSocket连接成功",
+            "message": "WebSocket connected successfully",
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
-        logger.error(f"发送连接成功消息失败: {e}")
+        logger.error(f"Failed to send connection success message: {e}")
         return
 
     try:
-        # 启动摄像头
+        # Start camera
         if not manager.camera_active:
             if not manager.start_camera(camera_id=0):
                 await websocket.send_json({
                     "type": "error",
-                    "message": "无法启动摄像头"
+                    "message": "Cannot start camera"
                 })
                 return
 
-        logger.info("开始摄像头流传输")
+        logger.info("Camera stream transmission started")
 
-        # 主循环
+        # Main loop
         while True:
-            # 非阻塞读帧（cv2.VideoCapture.read() 是阻塞调用，用 executor 避免卡死事件循环）
+            # Non-blocking frame read (cv2.VideoCapture.read() is blocking, use executor to avoid event loop deadlock)
             frame = await loop.run_in_executor(None, manager.read_frame)
             if frame is None:
                 await asyncio.sleep(0.1)
                 continue
 
-            # 每帧检测客户端是否已断开
+            # Check client disconnected each frame
             try:
                 await asyncio.wait_for(websocket.receive_text(), timeout=0.001)
             except asyncio.TimeoutError:
-                pass  # 无消息，正常继续
+                pass  # No message, continue normally
             except WebSocketDisconnect:
                 raise
 
-            # 调整大小以提高性能
+            # Resize for performance
             frame = cv2.resize(frame, (settings.CAMERA_FRAME_WIDTH, settings.CAMERA_FRAME_HEIGHT))
 
-            # 执行检测
+            # Run detection
             try:
                 detection_result = await manager.detection_service.process_camera_frame(frame)
             except Exception as e:
-                logger.error(f"摄像头帧检测失败: {e}")
+                logger.error(f"Camera frame detection failed: {e}")
                 detection_result = {
                     "success": False,
                     "error": str(e)
                 }
 
-            # 准备发送的数据
-            frame_base64 = None  # 初始化变量
+            # Prepare data to send
+            frame_base64 = None  # Initialize variable
             if detection_result["success"]:
-                # 将标注后的帧转换为base64
+                # Convert annotated frame to base64
                 annotated_bytes = detection_result.get("annotated_frame")
                 if annotated_bytes:
-                    # 解码标注图像
+                    # Decode annotated image
                     nparr = np.frombuffer(annotated_bytes, np.uint8)
                     annotated_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-                    # 转换为JPEG
+                    # Convert to JPEG
                     _, buffer = cv2.imencode('.jpg', annotated_frame, [
                         cv2.IMWRITE_JPEG_QUALITY, settings.CAMERA_JPEG_QUALITY
                     ])
                     frame_base64 = base64.b64encode(buffer).decode('utf-8')
                 else:
-                    # 使用原始帧
+                    # Use raw frame
                     _, buffer = cv2.imencode('.jpg', frame, [
                         cv2.IMWRITE_JPEG_QUALITY, settings.CAMERA_JPEG_QUALITY
                     ])
@@ -228,31 +228,31 @@ async def camera_stream(
             else:
                 message = {
                     "type": "error",
-                    "message": detection_result.get("error", "检测失败")
+                    "message": detection_result.get("error", "Detection failed")
                 }
             try:
                 await websocket.send_json(message)
             except (WebSocketDisconnect, ConnectionClosedOK):
                 raise
             except Exception as e:
-                logger.error(f"发送WebSocket数据失败: {e}")
-                logger.error(f"错误详情: {traceback.format_exc()}")
+                logger.error(f"Failed to send WebSocket data: {e}")
+                logger.error(f"Error details: {traceback.format_exc()}")
                 break
 
     except WebSocketDisconnect:
-        logger.info("WebSocket连接断开")
+        logger.info("WebSocket disconnected")
     except Exception as e:
-        logger.error(f"摄像头流异常: {e}")
+        logger.error(f"Camera stream error: {e}")
         await websocket.send_json({
             "type": "error",
-            "message": f"摄像头流异常: {str(e)}"
+            "message": f"Camera stream error: {str(e)}"
         })
     finally:
         manager.disconnect(websocket)
 
 @router.get("/status")
 async def camera_status(manager: ConnectionManager = Depends(get_connection_manager)):
-    """获取摄像头状态"""
+    """Get camera status"""
     return {
         "camera_active": manager.camera_active,
         "active_connections": len(manager.active_connections),
@@ -264,38 +264,38 @@ async def start_camera(
     camera_id: int = 0,
     manager: ConnectionManager = Depends(get_connection_manager)
 ):
-    """启动摄像头"""
+    """Start camera"""
     try:
         if manager.start_camera(camera_id):
             return {
                 "success": True,
-                "message": f"摄像头已启动 (ID: {camera_id})",
+                "message": f"Camera started (ID: {camera_id})",
                 "camera_id": camera_id
             }
         else:
             return {
                 "success": False,
-                "message": f"无法启动摄像头 (ID: {camera_id})"
+                "message": f"Cannot start camera (ID: {camera_id})"
             }
     except Exception as e:
-        logger.error(f"启动摄像头API失败: {e}")
+        logger.error(f"Start camera API failed: {e}")
         return {
             "success": False,
-            "message": f"启动摄像头失败: {str(e)}"
+            "message": f"Failed to start camera: {str(e)}"
         }
 
 @router.post("/stop")
 async def stop_camera(manager: ConnectionManager = Depends(get_connection_manager)):
-    """停止摄像头"""
+    """Stop camera"""
     try:
         manager.stop_camera()
         return {
             "success": True,
-            "message": "摄像头已停止"
+            "message": "Camera stopped"
         }
     except Exception as e:
-        logger.error(f"停止摄像头API失败: {e}")
+        logger.error(f"Stop camera API failed: {e}")
         return {
             "success": False,
-            "message": f"停止摄像头失败: {str(e)}"
+            "message": f"Failed to stop camera: {str(e)}"
         }

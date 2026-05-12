@@ -1,6 +1,6 @@
 <template>
   <div class="detection-container">
-    <!-- 左侧导航 -->
+    <!-- Sidebar -->
     <nav class="sidebar">
       <div class="logo-area">
         <div class="logo-dot"></div>
@@ -8,31 +8,37 @@
       </div>
 
       <div class="menu-item active">
-        <span>Monitor</span>
+        <span>{{ $t('menu.monitor') }}</span>
+      </div>
+
+      <div class="lang-switch">
+        <button class="lang-btn" @click="switchLocale">
+          {{ $t('lang.switch') }}
+        </button>
       </div>
     </nav>
 
-    <!-- 主内容区 -->
+    <!-- Main content -->
     <div class="main-container">
-      <!-- 顶部标题和输入源切换 -->
+      <!-- Header with source tabs -->
       <header class="main-header">
-        <h1>Monitor</h1>
+        <h1>{{ $t('menu.monitor') }}</h1>
         <div class="source-tabs">
           <button class="tab" :class="{ active: activeInputType === 'camera' }" @click="switchInputType('camera')">
-            摄像头
+            {{ $t('input.camera') }}
           </button>
           <button class="tab" :class="{ active: activeInputType === 'image' }" @click="switchInputType('image')">
-            本地图片
+            {{ $t('input.localImage') }}
           </button>
         </div>
       </header>
 
-      <!-- 核心监测展示区 -->
+      <!-- Core display area -->
       <div class="main-display">
-        <!-- 左侧：检测可视化区域 -->
+        <!-- Left: detection visualization -->
         <div class="display-card viewer-panel">
           <div class="viewer-area">
-            <!-- 图片上传区域 -->
+            <!-- Image upload area -->
             <div v-if="activeInputType === 'image' && !currentImageUrl" class="upload-placeholder"
               @click="triggerImageUpload" @dragover.prevent="handleDragOver" @drop.prevent="handleImageDrop">
               <div class="upload-icon">
@@ -40,12 +46,12 @@
                   <FolderOpened />
                 </el-icon>
               </div>
-              <p style="margin: 0; font-weight: 600;">点击或将图片拖拽至此处</p>
-              <p style="margin: 4px 0 0; font-size: 0.8rem;">支持 JPG, PNG 格式进行单张识别</p>
+              <p style="margin: 0; font-weight: 600;">{{ $t('upload.dragDrop') }}</p>
+              <p style="margin: 4px 0 0; font-size: 0.8rem;">{{ $t('upload.hint') }}</p>
               <input ref="imageInput" type="file" accept="image/*" @change="handleImageUpload" style="display: none" />
             </div>
 
-            <!-- 摄像头区域 -->
+            <!-- Camera area -->
             <div v-if="activeInputType === 'camera'" class="camera-placeholder">
               <div v-if="!isCameraActive" class="camera-prompt">
                 <div class="upload-icon">
@@ -53,17 +59,16 @@
                     <VideoCamera />
                   </el-icon>
                 </div>
-                <p style="margin: 0; font-weight: 600;">摄像头未启动</p>
-                <p style="margin: 4px 0 0; font-size: 0.8rem;">使用按钮启动实时摄像头检测</p>
+                <p style="margin: 0; font-weight: 600;">{{ $t('camera.notStarted') }}</p>
+                <p style="margin: 4px 0 0; font-size: 0.8rem;">{{ $t('camera.startHint') }}</p>
               </div>
               <div v-else class="camera-active">
                 <div class="camera-status">
-                  <el-tag type="success" size="small">摄像头运行中</el-tag>
-                  <p>实时帧率: {{ fps }} FPS</p>
+                  <el-tag type="success" size="small">{{ $t('camera.running') }}</el-tag>
+                  <p>{{ $t('camera.fps') }} {{ fps }} FPS</p>
                 </div>
-                <!-- 摄像头视频流显示区域 -->
                 <div v-if="cameraStreamUrl" class="camera-stream-container">
-                  <img :src="cameraStreamUrl" alt="摄像头实时画面" class="camera-stream-image" />
+                  <img :src="cameraStreamUrl" alt="Camera live feed" class="camera-stream-image" />
                 </div>
                 <div v-else class="camera-placeholder-image">
                   <div class="upload-icon">
@@ -71,76 +76,76 @@
                       <VideoCamera />
                     </el-icon>
                   </div>
-                  <p style="margin: 4px 0 0; font-size: 0.8rem;">正在连接摄像头流...</p>
+                  <p style="margin: 4px 0 0; font-size: 0.8rem;">{{ $t('camera.connecting') }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- 检测结果显示 -->
+            <!-- Detection result display -->
             <div v-if="activeInputType === 'image' && currentImageUrl" class="detection-result">
-              <img :src="currentImageUrl" alt="检测结果" class="result-image" />
+              <img :src="currentImageUrl" alt="Detection result" class="result-image" />
             </div>
 
-            <!-- 检测中状态 -->
+            <!-- Loading state -->
             <div v-if="detectionLoading" class="detection-loading">
               <el-icon class="loading-icon">
                 <Loading />
               </el-icon>
-              <p>正在检测中...</p>
+              <p>{{ $t('detection.loading') }}</p>
             </div>
           </div>
 
-          <!-- 底部操作栏 -->
+          <!-- Bottom toolbar -->
           <div class="viewer-controls">
             <div class="model-info">
-              当前权重:
+              {{ $t('model.currentWeight') }}
               <span class="model-name">
                 {{ selectedModelLabel || 'yolo26n_ppe.pt' }}
               </span>
             </div>
             <div class="control-buttons">
-              <!-- 摄像头模式 -->
+              <!-- Camera mode controls -->
               <template v-if="activeInputType === 'camera'">
                 <button class="btn btn-secondary" @click="toggleCamera" :disabled="cameraLoading || !isCameraActive">
-                  关闭摄像头
+                  {{ $t('camera.stop') }}
                 </button>
                 <button class="btn btn-primary" @click="toggleCamera" :disabled="cameraLoading || isCameraActive"
                   v-loading="cameraLoading">
-                  {{ cameraLoading ? '启动中...' : '启用摄像头' }}
+                  {{ cameraLoading ? $t('camera.starting') : $t('camera.start') }}
                 </button>
               </template>
-              <!-- 图片和视频模式 -->
+              <!-- Image mode controls -->
               <template v-else>
                 <button class="btn btn-secondary" @click="clearResult" :disabled="!currentImageUrl && !detectionLoading">
-                  清除结果
+                  {{ $t('action.clearResult') }}
                 </button>
                 <button class="btn btn-primary" @click="startDetection" :disabled="detectionLoading || !canStartDetection"
                   v-loading="detectionLoading">
-                  {{ detectionLoading ? '检测中...' : '开始检测' }}
+                  {{ detectionLoading ? $t('action.detecting') : $t('action.startDetection') }}
                 </button>
               </template>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：实时检测日志 -->
+        <!-- Right: detection log panel -->
         <div class="alert-panel">
           <div class="alert-header">
-            <span>{{ activeInputType === 'camera' ? '实时状态' : '检测日志' }}</span>
+            <span>{{ activeInputType === 'camera' ? $t('panel.liveStatus') : $t('panel.detectionLog') }}</span>
             <button v-if="activeInputType !== 'camera'" class="btn-clear-logs" @click="clearLogs" :disabled="detectionHistory.length === 0">
-              清理日志
+              {{ $t('action.clearLogs') }}
             </button>
           </div>
           <div class="alert-list">
-            <!-- 摄像头模式：实时状态概览 -->
+            <!-- Camera mode: live status overview -->
             <template v-if="activeInputType === 'camera'">
               <div v-if="!isCameraActive" class="empty-alerts">
-                <p>摄像头未启动</p>
-                <p class="hint">使用按钮启动实时检测</p>
+                <p>{{ $t('status.notStarted') }}</p>
+                <p class="hint">{{ $t('status.startHint') }}</p>
               </div>
               <div v-else class="camera-status-summary">
                 <div class="summary-row">
-                  <span class="summary-label">人员</span>
+                  <span class="summary-label">{{ $t('label.person') }}</span>
                   <span class="summary-value">{{ cameraSummary.person }}</span>
                 </div>
                 <div class="summary-row" v-for="risk in activeRisks" :key="risk.type">
@@ -148,16 +153,16 @@
                   <span class="summary-value summary-risk">{{ risk.count }}</span>
                 </div>
                 <div class="summary-row" v-if="activeRisks.length === 0">
-                  <span class="summary-label summary-safe">所有人员防护到位</span>
+                  <span class="summary-label summary-safe">{{ $t('status.allSafe') }}</span>
                 </div>
               </div>
             </template>
 
-            <!-- 图片模式：检测记录列表 -->
+            <!-- Image mode: detection history list -->
             <template v-else>
               <div v-if="detectionHistory.length === 0" class="empty-alerts">
-                <p>暂无检测记录</p>
-                <p class="hint">上传图片开始检测</p>
+                <p>{{ $t('log.noRecords') }}</p>
+                <p class="hint">{{ $t('log.uploadHint') }}</p>
               </div>
               <div v-for="(item, index) in detectionHistory" :key="index" class="alert-item">
                 <div class="status-dot" :style="{
@@ -168,16 +173,16 @@
                   <div class="alert-title">
                     {{ item.message }}
                     <button class="btn-expand" @click.stop="toggleExpand(index)">
-                      {{ item.expanded ? '收起' : '展开' }}
+                      {{ item.expanded ? $t('action.collapse') : $t('action.expand') }}
                     </button>
                   </div>
                   <div class="alert-details">
-                    <span class="source">来源: {{ item.source }}</span>
+                    <span class="source">{{ $t('log.source') }} {{ item.source }}</span>
                     <span class="time">{{ item.timestamp }}</span>
                   </div>
                   <div v-if="item.expanded && (item.detections?.length > 0 || item.risks?.length > 0)" class="detection-details">
                     <div v-if="item.detections?.length > 0" class="detection-section">
-                      <h4>检测到的对象 ({{ item.detections.length }}个):</h4>
+                      <h4>{{ $t('log.detectedObjects', { count: item.detections.length }) }}</h4>
                       <div class="detection-list">
                         <div v-for="(det, detIndex) in sortDetections(item.detections)" :key="detIndex" class="detection-item">
                           <span class="detection-class" :style="{ color: classColors[det.class] || '#94A3B8' }">
@@ -189,14 +194,14 @@
                       </div>
                     </div>
                     <div v-if="item.risks?.length > 0" class="risk-section">
-                      <h4>风险告警 ({{ item.risks.length }}个):</h4>
+                      <h4>{{ $t('log.riskAlerts', { count: item.risks.length }) }}</h4>
                       <div class="risk-list">
                         <div v-for="(risk, riskIndex) in item.risks" :key="riskIndex" class="risk-item">
                           <span class="risk-level" :style="{ color: risk.level === 'critical' ? '#DC2626' : risk.level === 'high' ? '#EF4444' : '#F59E0B' }">
-                            {{ risk.level === 'critical' ? '严重' : risk.level === 'high' ? '高危' : '中危' }}
+                            {{ risk.level === 'critical' ? $t('risk.critical') : risk.level === 'high' ? $t('risk.high') : $t('risk.medium') }}
                           </span>
                           <span class="risk-message">{{ risk.message }}</span>
-                          <span v-if="risk.count" class="risk-count">数量: {{ risk.count }}</span>
+                          <span v-if="risk.count" class="risk-count">{{ $t('label.count') }} {{ risk.count }}</span>
                         </div>
                       </div>
                     </div>
@@ -208,18 +213,18 @@
         </div>
       </div>
 
-      <!-- 性能统计 -->
+      <!-- Performance stats -->
       <div class="performance-stats">
         <div class="stat-item">
-          <span class="stat-label">推理延迟:</span>
+          <span class="stat-label">{{ $t('stats.inferenceLatency') }}</span>
           <span class="stat-value">{{ inferenceLatency }}ms</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">检测数量:</span>
+          <span class="stat-label">{{ $t('stats.detectionCount') }}</span>
           <span class="stat-value">{{ detectionCount }}</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">风险告警:</span>
+          <span class="stat-label">{{ $t('stats.riskAlerts') }}</span>
           <span class="stat-value" :style="{ color: activeRisks.length > 0 ? 'var(--danger)' : 'var(--success)' }">
             {{ activeRisks.length }}
           </span>
@@ -231,6 +236,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import {
   VideoCamera,
@@ -239,10 +245,12 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
-// API基础URL，通过环境变量配置
+const { t, locale } = useI18n()
+
+// API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-// 状态定义
+// State
 const activeInputType = ref('image')
 const selectedModel = ref('yolo26n_ppe')
 const currentImageUrl = ref('')
@@ -257,12 +265,12 @@ const cameraLoading = ref(false)
 const detectionLoading = ref(false)
 const availableModels = ref<any[]>([])
 
-// 分离图片检测日志
+// Separate image detection logs
 const imageLogs = ref<any[]>([])
 const cameraLogs = ref<any[]>([])
 const detectionHistory = computed(() => imageLogs.value)
 
-// 摄像头流相关状态
+// Camera stream state
 const cameraStreamUrl = ref<string>('')
 const cameraWebSocket = ref<WebSocket | null>(null)
 const lastFrameTime = ref<number>(0)
@@ -271,10 +279,10 @@ const frameTimes = ref<number[]>([])
 // Refs
 const imageInput = ref<HTMLInputElement>()
 
-// API配置
+// API config
 const API_BASE = '/api/v1'
 
-// 计算属性
+// Computed
 const selectedModelLabel = computed(() => {
   const model = availableModels.value.find((m: any) => m.name === selectedModel.value)
   return model?.display_name || selectedModel.value || 'yolo26n_ppe.pt'
@@ -283,12 +291,11 @@ const selectedModelLabel = computed(() => {
 const canStartDetection = computed(() => {
   if (detectionLoading.value) return false
   if (activeInputType.value === 'image' && currentImageUrl.value) return true
-  // 摄像头实时检测自动进行，不需要手动开始
   if (activeInputType.value === 'camera') return false
   return false
 })
 
-// 摄像头实时状态摘要
+// Camera live status summary
 const cameraSummary = computed(() => {
   const summary: Record<string, number> = { person: 0 }
   for (const det of detections.value) {
@@ -298,40 +305,46 @@ const cameraSummary = computed(() => {
   return summary
 })
 
-// 颜色映射：无危险（有防护）为绿色，有危险（无防护）为红色
+// Color mapping: safe gear = green, missing gear = red
 const classColors: Record<string, string> = {
-  person: '#94A3B8',      // 中性色
-  helmet: '#10B981',      // 绿色：有安全帽
-  no_helmet: '#EF4444',   // 红色：无安全帽
-  vest: '#10B981',        // 绿色：有反光衣
-  no_vest: '#EF4444',     // 红色：无反光衣
-  none: '#EF4444',        // 红色：无防护
-  gloves: '#10B981',      // 绿色：有手套
-  no_gloves: '#EF4444',   // 红色：无手套
-  boots: '#10B981',       // 绿色：有安全靴
-  no_boots: '#EF4444',    // 红色：无安全靴
-  goggles: '#10B981',     // 绿色：有护目镜
-  no_goggle: '#EF4444'    // 红色：无护目镜
+  person: '#94A3B8',
+  helmet: '#10B981',
+  no_helmet: '#EF4444',
+  vest: '#10B981',
+  no_vest: '#EF4444',
+  none: '#EF4444',
+  gloves: '#10B981',
+  no_gloves: '#EF4444',
+  boots: '#10B981',
+  no_boots: '#EF4444',
+  goggles: '#10B981',
+  no_goggle: '#EF4444'
 }
 
-const classLabels: Record<string, string> = {
-  person: '人员',
-  helmet: '安全帽',
-  no_helmet: '未戴安全帽',
-  vest: '反光衣',
-  no_vest: '未穿反光衣',
-  none: '无防护',
-  gloves: '手套',
-  no_gloves: '未戴手套',
-  boots: '安全靴',
-  no_boots: '未穿安全靴',
-  goggles: '护目镜',
-  no_goggle: '未戴护目镜'
+// Localized class labels
+const classLabels = computed<Record<string, string>>(() => ({
+  person: t('classLabel.person'),
+  helmet: t('classLabel.helmet'),
+  no_helmet: t('classLabel.no_helmet'),
+  vest: t('classLabel.vest'),
+  no_vest: t('classLabel.no_vest'),
+  none: t('classLabel.none'),
+  gloves: t('classLabel.gloves'),
+  no_gloves: t('classLabel.no_gloves'),
+  boots: t('classLabel.boots'),
+  no_boots: t('classLabel.no_boots'),
+  goggles: t('classLabel.goggles'),
+  no_goggle: t('classLabel.no_goggle')
+}))
+
+// Locale switching
+const switchLocale = () => {
+  locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN'
+  localStorage.setItem('siteguard-locale', locale.value)
 }
 
-// 方法
+// Methods
 const switchInputType = (type: string) => {
-  // 清除当前内容并撤销URL
   if (activeInputType.value === 'image' && currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
     currentImageUrl.value = ''
@@ -339,7 +352,6 @@ const switchInputType = (type: string) => {
   }
 
   activeInputType.value = type
-  // 停止摄像头如果切换到其他输入源
   if (type !== 'camera' && isCameraActive.value) {
     toggleCamera()
   }
@@ -361,22 +373,21 @@ const handleImageDrop = async (event: DragEvent) => {
 
   const file = files[0]
   if (!file.type.startsWith('image/')) {
-    ElMessage.error('请上传图片文件')
+    ElMessage.error(t('message.uploadImageFile'))
     return
   }
 
   if (file.size > 20 * 1024 * 1024) {
-    ElMessage.error('文件大小不能超过 20MB')
+    ElMessage.error(t('message.fileTooLarge'))
     return
   }
 
-  // 撤销之前的URL
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
   currentImageUrl.value = URL.createObjectURL(file)
   currentImageFile.value = file
-  ElMessage.success('图片已加载，点击"开始检测"进行分析')
+  ElMessage.success(t('message.imageLoaded'))
 }
 
 const handleImageUpload = async (event: Event) => {
@@ -385,18 +396,16 @@ const handleImageUpload = async (event: Event) => {
 
   const file = input.files[0]
   if (file.size > 20 * 1024 * 1024) {
-    ElMessage.error('文件大小不能超过 20MB')
+    ElMessage.error(t('message.fileTooLarge'))
     return
   }
 
-  // 撤销之前的URL
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
-  // 创建临时URL用于预览并保存文件对象
   currentImageUrl.value = URL.createObjectURL(file)
   currentImageFile.value = file
-  ElMessage.success('图片已加载，点击"开始检测"进行分析')
+  ElMessage.success(t('message.imageLoaded'))
 }
 
 const toggleCamera = () => {
@@ -406,7 +415,7 @@ const toggleCamera = () => {
     cameraStreamUrl.value = ''
     fps.value = 0
     frameTimes.value = []
-    ElMessage.success('摄像头已停止')
+    ElMessage.success(t('message.cameraStopped'))
   } else {
     cameraLoading.value = true
     connectCameraWebSocket()
@@ -424,14 +433,13 @@ const connectCameraWebSocket = () => {
       cameraLoading.value = false
       isCameraActive.value = true
       lastFrameTime.value = Date.now()
-      ElMessage.success('摄像头连接成功')
+      ElMessage.success(t('message.cameraConnected'))
     }
 
     cameraWebSocket.value.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
 
-        // 确保摄像头状态已激活
         if (cameraLoading.value) {
           cameraLoading.value = false
         }
@@ -440,12 +448,10 @@ const connectCameraWebSocket = () => {
         }
 
         if (data.type === 'connected') {
-          ElMessage.success('摄像头连接已就绪')
+          ElMessage.success(t('message.cameraReady'))
         } else if (data.type === 'frame') {
-          // 更新摄像头流URL
           cameraStreamUrl.value = `data:image/jpeg;base64,${data.frame}`
 
-          // 更新检测结果
           if (data.detections) {
             detections.value = data.detections
             activeRisks.value = data.risks || []
@@ -453,7 +459,6 @@ const connectCameraWebSocket = () => {
             detectionCount.value = detections.value.length
           }
 
-          // 计算FPS
           const now = Date.now()
           const frameTime = now - lastFrameTime.value
           lastFrameTime.value = now
@@ -466,42 +471,42 @@ const connectCameraWebSocket = () => {
           const avgFrameTime = frameTimes.value.reduce((sum, time) => sum + time, 0) / frameTimes.value.length
           fps.value = frameTimes.value.length > 0 ? Math.round(1000 / avgFrameTime) : 0
         } else if (data.type === 'error') {
-          ElMessage.error(`摄像头错误: ${data.message}`)
+          ElMessage.error(t('message.cameraError', { msg: data.message }))
         }
       } catch (error) {
-        console.error('解析摄像头数据失败:', error)
+        console.error('Failed to parse camera data:', error)
       }
     }
 
     cameraWebSocket.value.onerror = (error) => {
-      console.error('摄像头WebSocket错误:', error)
+      console.error('Camera WebSocket error:', error)
       cameraLoading.value = false
-      ElMessage.error('摄像头连接失败，请检查后端服务')
+      ElMessage.error(t('message.cameraFailed'))
     }
 
     cameraWebSocket.value.onclose = () => {
       if (isCameraActive.value) {
-        ElMessage.warning('摄像头连接已断开')
+        ElMessage.warning(t('message.cameraDisconnected'))
         isCameraActive.value = false
         cameraStreamUrl.value = ''
       }
     }
 
-    // 设置超时（增加到15秒，因为摄像头启动和模型加载需要时间）
+    // Timeout: camera startup + model loading may take time
     setTimeout(() => {
       if (cameraLoading.value && !isCameraActive.value) {
         cameraLoading.value = false
         if (cameraWebSocket.value) {
           cameraWebSocket.value.close()
         }
-        ElMessage.error('摄像头连接超时（15秒）')
+        ElMessage.error(t('message.cameraTimeout'))
       }
     }, 15000)
 
   } catch (error) {
-    console.error('启动摄像头失败:', error)
+    console.error('Failed to start camera:', error)
     cameraLoading.value = false
-    ElMessage.error('启动摄像头失败: ' + error)
+    ElMessage.error(t('message.cameraStartFailed', { error: String(error) }))
   }
 }
 
@@ -522,7 +527,7 @@ const startDetection = async () => {
       await detectImage()
     }
   } catch (error) {
-    ElMessage.error(`检测失败: ${error}`)
+    ElMessage.error(t('message.detectionFailed', { error: String(error) }))
   } finally {
     detectionLoading.value = false
   }
@@ -530,10 +535,9 @@ const startDetection = async () => {
 
 const detectImage = async () => {
   try {
-    // 获取图片文件
     const file = currentImageFile.value
     if (!file) {
-      ElMessage.error('请先选择图片文件')
+      ElMessage.error(t('message.selectImageFirst'))
       return
     }
     const formData = new FormData()
@@ -552,11 +556,11 @@ const detectImage = async () => {
       inferenceLatency.value = result.inference_time || 0
       detectionCount.value = detections.value.length
 
-      // 更新检测历史（图片模式）
+      // Update detection history (image mode)
       imageLogs.value.unshift({
         timestamp: new Date().toLocaleTimeString(),
         source: file.name,
-        message: activeRisks.value.length > 0 ? '检测到风险' : '检测完成',
+        message: activeRisks.value.length > 0 ? t('log.riskDetected') : t('log.detectionComplete'),
         riskLevel: activeRisks.value.length > 0 ? 'high' : 'success',
         detections: [...detections.value],
         risks: [...activeRisks.value],
@@ -566,32 +570,29 @@ const detectImage = async () => {
         imageLogs.value = imageLogs.value.slice(0, 10)
       }
 
-      // 更新标注图片URL - 后端始终返回标注图片
       const annotatedUrl = result.annotated_image_url
         ? (result.annotated_image_url.startsWith('http')
             ? result.annotated_image_url
             : `${API_BASE_URL}${result.annotated_image_url}`)
         : `${API_BASE_URL}/static/temp/annotated_${Date.now()}.jpg`
 
-      // 撤销之前的对象URL（如果是blob URL）
       if (currentImageUrl.value && currentImageUrl.value.startsWith('blob:')) {
         URL.revokeObjectURL(currentImageUrl.value)
       }
 
       currentImageUrl.value = annotatedUrl
 
-      ElMessage.success('图片检测完成')
+      ElMessage.success(t('message.detectionComplete'))
     } else {
-      ElMessage.error('检测失败: ' + (response.data.detail || '未知错误'))
+      ElMessage.error(t('message.detectionError', { msg: response.data.detail || 'Unknown error' }))
     }
   } catch (error: any) {
-    console.error('检测失败:', error)
-    ElMessage.error(`检测失败: ${error.response?.data?.detail || error.message}`)
+    console.error('Detection failed:', error)
+    ElMessage.error(t('message.detectionFailed', { error: error.response?.data?.detail || error.message }))
   }
 }
 
 const clearResult = () => {
-  // 撤销对象URL以释放内存
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
@@ -602,7 +603,7 @@ const clearResult = () => {
   activeRisks.value = []
   detectionCount.value = 0
   inferenceLatency.value = 0
-  ElMessage.info('已清除检测结果')
+  ElMessage.info(t('message.resultCleared'))
 }
 
 const clearLogs = () => {
@@ -611,7 +612,7 @@ const clearLogs = () => {
   } else {
     imageLogs.value = []
   }
-  ElMessage.success('已清空检测日志')
+  ElMessage.success(t('message.logsCleared'))
 }
 
 const toggleExpand = (index: number) => {
@@ -621,10 +622,9 @@ const toggleExpand = (index: number) => {
 const sortDetections = (detections: any[]) => {
   if (!detections || detections.length === 0) return []
   return [...detections].sort((a, b) => {
-    // person排在最前面
+    // Person first
     if (a.class === 'person' && b.class !== 'person') return -1
     if (a.class !== 'person' && b.class === 'person') return 1
-    // 其他保持原顺序
     return 0
   })
 }
@@ -635,33 +635,30 @@ const loadModels = async () => {
     const response = await axios.get(`${API_BASE}/models/list`)
     if (response.data.success && response.data.models) {
       availableModels.value = response.data.models
-      // 设置默认选中模型
       if (response.data.current_model && availableModels.value.length > 0) {
         selectedModel.value = response.data.current_model
       }
     }
   } catch (error) {
-    console.error('加载模型列表失败:', error)
-    // 使用模拟数据作为后备
+    console.error('Failed to load model list:', error)
+    // Fallback mock data
     availableModels.value = [
-      { name: 'yolo26n_ppe.pt', display_name: 'YOLO26n-PPE (默认)' },
+      { name: 'yolo26n_ppe.pt', display_name: 'YOLO26n-PPE (Default)' },
       { name: 'yolo26s_ppe.pt', display_name: 'YOLO26s-PPE' },
       { name: 'yolo26m_ppe.pt', display_name: 'YOLO26m-PPE' }
     ]
   }
 }
 
-// 生命周期
+// Lifecycle
 onMounted(async () => {
   await loadModels()
 })
 
 onUnmounted(() => {
-  // 清理资源
   if (currentImageUrl.value) {
     URL.revokeObjectURL(currentImageUrl.value)
   }
-  // 清理摄像头资源
   disconnectCameraWebSocket()
 })
 </script>
@@ -706,7 +703,7 @@ html, body {
   overflow: hidden;
 }
 
-/* 侧边导航 */
+/* Sidebar */
 .sidebar {
   width: 260px;
   background: var(--card-bg);
@@ -762,7 +759,33 @@ html, body {
   font-size: 1.1rem;
 }
 
-/* 主内容区 */
+/* Language switch */
+.lang-switch {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1.5px solid var(--border);
+}
+
+.lang-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-body);
+  transition: all 0.2s ease;
+}
+
+.lang-btn:hover {
+  background: #F1F5F9;
+  border-color: var(--brand-color);
+  color: var(--brand-color);
+}
+
+/* Main content */
 .main-container {
   flex: 1;
   padding: 32px 40px;
@@ -785,7 +808,7 @@ html, body {
   font-weight: 600;
 }
 
-/* 输入源切换 Tab */
+/* Source tabs */
 .source-tabs {
   display: flex;
   background: #F1F5F9;
@@ -816,7 +839,7 @@ html, body {
   font-weight: 600;
 }
 
-/* 核心监测展示区 */
+/* Core display */
 .main-display {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
@@ -826,7 +849,7 @@ html, body {
   min-height: 0;
 }
 
-/* 显示面板 */
+/* Display panel */
 .display-card,
 .viewer-panel {
   background: var(--card-bg);
@@ -851,7 +874,7 @@ html, body {
   overflow: hidden;
 }
 
-/* 上传占位样式 */
+/* Upload placeholder */
 .upload-placeholder {
   text-align: center;
   color: #94A3B8;
@@ -939,7 +962,7 @@ html, body {
   padding: 40px;
 }
 
-/* 检测结果显示 */
+/* Detection result */
 .detection-result {
   position: relative;
   width: 100%;
@@ -955,8 +978,7 @@ html, body {
   object-fit: contain;
 }
 
-
-/* 检测中状态 */
+/* Loading state */
 .detection-loading {
   position: absolute;
   top: 0;
@@ -979,16 +1001,11 @@ html, body {
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* 底部操作栏 */
+/* Bottom toolbar */
 .viewer-controls {
   padding: 16px 24px;
   background: var(--card-bg);
@@ -1048,7 +1065,7 @@ html, body {
   background: #4338CA;
 }
 
-/* 告警面板 */
+/* Alert panel */
 .alert-panel {
   background: var(--card-bg);
   border-radius: 20px;
@@ -1070,7 +1087,7 @@ html, body {
   justify-content: space-between;
 }
 
-/* 摄像头实时状态摘要 */
+/* Camera status summary */
 .camera-status-summary {
   padding: 20px;
   display: flex;
@@ -1179,7 +1196,6 @@ html, body {
   margin-bottom: 4px;
 }
 
-
 .alert-details {
   display: flex;
   justify-content: space-between;
@@ -1276,7 +1292,7 @@ html, body {
   font-size: 0.75rem;
 }
 
-/* 性能统计 */
+/* Performance stats */
 .performance-stats {
   padding: 16px 24px;
   background: var(--card-bg);
@@ -1307,7 +1323,7 @@ html, body {
   font-size: 0.875rem;
 }
 
-/* 响应式调整 */
+/* Responsive */
 @media (max-width: 1200px) {
   .main-display {
     grid-template-columns: 1fr;
@@ -1340,6 +1356,19 @@ html, body {
   .menu-item {
     margin-bottom: 0;
     margin-right: 8px;
+  }
+
+  .lang-switch {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    margin-left: 8px;
+  }
+
+  .lang-btn {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.8rem;
   }
 
   .main-container {

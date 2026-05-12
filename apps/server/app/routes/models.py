@@ -1,5 +1,5 @@
 """
-模型管理路由
+Model management routes
 """
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/list")
 async def list_models(request: Request):
     """
-    获取可用模型列表
+    Get available model list
     """
     try:
         model_manager = request.app.state.model_manager
@@ -39,44 +39,44 @@ async def list_models(request: Request):
             "models_dir": str(settings.MODELS_DIR.relative_to(settings.BASE_DIR))
         }
     except Exception as e:
-        logger.error(f"获取模型列表失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取模型列表失败: {str(e)}")
+        logger.error(f"Failed to get model list: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get model list: {str(e)}")
 
 @router.post("/switch")
 async def switch_model(request: Request, model_name: str, use_end2end: bool = None):
     """
-    切换当前模型
+    Switch current model
     """
     try:
-        # 验证模型文件是否存在
+        # Verify model file exists
         model_path = settings.MODELS_DIR / model_name
         if not model_path.exists():
             raise HTTPException(
                 status_code=404,
-                detail=f"模型文件不存在: {model_name}"
+                detail=f"Model file not found: {model_name}"
             )
 
-        # 获取模型管理器并切换模型
+        # Get model manager and switch model
         model_manager = request.app.state.model_manager
         if not model_manager:
             raise HTTPException(
                 status_code=500,
-                detail="模型管理器未初始化"
+                detail="Model manager not initialized"
             )
 
-        # 调用ModelManager切换模型
-        logger.info(f"请求切换模型: {model_name}, 端到端推理: {use_end2end}")
+        # Call ModelManager to switch model
+        logger.info(f"Model switch requested: {model_name}, end-to-end inference: {use_end2end}")
         success = model_manager.switch_model(model_name, use_end2end=use_end2end)
 
         if not success:
             raise HTTPException(
                 status_code=500,
-                detail=f"模型切换失败: {model_name}"
+                detail=f"Model switch failed: {model_name}"
             )
 
         return {
             "success": True,
-            "message": f"已切换模型到 {model_name}",
+            "message": f"Switched to model {model_name}",
             "model_name": model_name,
             "use_end2end": model_manager.use_end2end if hasattr(model_manager, 'use_end2end') else True,
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -85,16 +85,16 @@ async def switch_model(request: Request, model_name: str, use_end2end: bool = No
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"切换模型失败: {e}")
-        raise HTTPException(status_code=500, detail=f"切换模型失败: {str(e)}")
+        logger.error(f"Model switch failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Model switch failed: {str(e)}")
 
 @router.get("/current")
 async def get_current_model():
     """
-    获取当前模型信息
+    Get current model info
     """
     try:
-        # 模拟当前模型信息
+        # Simulate current model info
         model_name = settings.DEFAULT_MODEL
         model_path = settings.MODELS_DIR / model_name
 
@@ -107,7 +107,7 @@ async def get_current_model():
                 "loaded_at": datetime.now(timezone.utc).isoformat()
             }
         else:
-            # 如果默认模型不存在，返回第一个找到的模型
+            # If default model doesn't exist, return first found model
             models = list(settings.MODELS_DIR.glob("*.pt"))
             if not models:
                 models = list(settings.MODELS_DIR.glob("*.onnx"))
@@ -127,17 +127,17 @@ async def get_current_model():
         return {
             "success": True,
             "model": model_info,
-            "message": "获取当前模型成功" if model_info else "没有加载任何模型"
+            "message": "Current model retrieved successfully" if model_info else "No model loaded"
         }
 
     except Exception as e:
-        logger.error(f"获取当前模型失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取当前模型失败: {str(e)}")
+        logger.error(f"Failed to get current model: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get current model: {str(e)}")
 
 @router.get("/stats")
 async def get_model_stats():
     """
-    获取模型统计信息
+    Get model statistics
     """
     try:
         models_dir = settings.MODELS_DIR
@@ -167,5 +167,5 @@ async def get_model_stats():
         }
 
     except Exception as e:
-        logger.error(f"获取模型统计失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取模型统计失败: {str(e)}")
+        logger.error(f"Failed to get model stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get model stats: {str(e)}")

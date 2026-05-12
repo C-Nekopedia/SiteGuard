@@ -1,0 +1,105 @@
+{
+  "menu": {
+    "monitor": "Monitor"
+  },
+  "input": {
+    "camera": "摄像头",
+    "localImage": "本地图片"
+  },
+  "upload": {
+    "dragDrop": "点击或将图片拖拽至此处",
+    "hint": "支持 JPG, PNG 格式进行单张识别"
+  },
+  "camera": {
+    "notStarted": "摄像头未启动",
+    "startHint": "使用按钮启动实时摄像头检测",
+    "running": "摄像头运行中",
+    "fps": "实时帧率:",
+    "connecting": "正在连接摄像头流...",
+    "stop": "关闭摄像头",
+    "starting": "启动中...",
+    "start": "启用摄像头"
+  },
+  "detection": {
+    "loading": "正在检测中..."
+  },
+  "model": {
+    "currentWeight": "当前权重:"
+  },
+  "action": {
+    "clearResult": "清除结果",
+    "detecting": "检测中...",
+    "startDetection": "开始检测",
+    "clearLogs": "清理日志",
+    "collapse": "收起",
+    "expand": "展开"
+  },
+  "panel": {
+    "liveStatus": "实时状态",
+    "detectionLog": "检测日志"
+  },
+  "status": {
+    "allSafe": "所有人员防护到位",
+    "notStarted": "摄像头未启动",
+    "startHint": "使用按钮启动实时检测"
+  },
+  "label": {
+    "person": "人员",
+    "count": "数量:"
+  },
+  "log": {
+    "noRecords": "暂无检测记录",
+    "uploadHint": "上传图片开始检测",
+    "source": "来源:",
+    "detectedObjects": "检测到的对象 ({count}个):",
+    "riskAlerts": "风险告警 ({count}个):",
+    "riskDetected": "检测到风险",
+    "detectionComplete": "检测完成"
+  },
+  "risk": {
+    "critical": "严重",
+    "high": "高危",
+    "medium": "中危"
+  },
+  "stats": {
+    "inferenceLatency": "推理延迟:",
+    "detectionCount": "检测数量:",
+    "riskAlerts": "风险告警:"
+  },
+  "message": {
+    "uploadImageFile": "请上传图片文件",
+    "fileTooLarge": "文件大小不能超过 20MB",
+    "imageLoaded": "图片已加载，点击\"开始检测\"进行分析",
+    "cameraStopped": "摄像头已停止",
+    "cameraConnected": "摄像头连接成功",
+    "cameraReady": "摄像头连接已就绪",
+    "cameraError": "摄像头错误: {msg}",
+    "cameraFailed": "摄像头连接失败，请检查后端服务",
+    "cameraDisconnected": "摄像头连接已断开",
+    "cameraTimeout": "摄像头连接超时（15秒）",
+    "cameraStartFailed": "启动摄像头失败: {error}",
+    "detectionFailed": "检测失败: {error}",
+    "selectImageFirst": "请先选择图片文件",
+    "detectionComplete": "图片检测完成",
+    "detectionError": "检测失败: {msg}",
+    "resultCleared": "已清除检测结果",
+    "logsCleared": "已清空检测日志"
+  },
+  "classLabel": {
+    "person": "人员",
+    "helmet": "安全帽",
+    "no_helmet": "未戴安全帽",
+    "vest": "反光衣",
+    "no_vest": "未穿反光衣",
+    "none": "无防护",
+    "gloves": "手套",
+    "no_gloves": "未戴手套",
+    "boots": "安全靴",
+    "no_boots": "未穿安全靴",
+    "goggles": "护目镜",
+    "no_goggle": "未戴护目镜"
+  },
+  "lang": {
+    "switch": "EN"
+  }
+}

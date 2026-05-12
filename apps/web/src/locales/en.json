@@ -1,0 +1,105 @@
+{
+  "menu": {
+    "monitor": "Monitor"
+  },
+  "input": {
+    "camera": "Camera",
+    "localImage": "Local Image"
+  },
+  "upload": {
+    "dragDrop": "Click or drag image here",
+    "hint": "Supports JPG, PNG format for single image detection"
+  },
+  "camera": {
+    "notStarted": "Camera not started",
+    "startHint": "Use the button to start real-time camera detection",
+    "running": "Camera Running",
+    "fps": "Real-time FPS:",
+    "connecting": "Connecting to camera stream...",
+    "stop": "Stop Camera",
+    "starting": "Starting...",
+    "start": "Start Camera"
+  },
+  "detection": {
+    "loading": "Detecting..."
+  },
+  "model": {
+    "currentWeight": "Current Model:"
+  },
+  "action": {
+    "clearResult": "Clear Result",
+    "detecting": "Detecting...",
+    "startDetection": "Start Detection",
+    "clearLogs": "Clear Logs",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "panel": {
+    "liveStatus": "Live Status",
+    "detectionLog": "Detection Log"
+  },
+  "status": {
+    "allSafe": "All personnel properly equipped",
+    "notStarted": "Camera not started",
+    "startHint": "Use the button to start real-time detection"
+  },
+  "label": {
+    "person": "Person",
+    "count": "Count:"
+  },
+  "log": {
+    "noRecords": "No detection records",
+    "uploadHint": "Upload an image to start detection",
+    "source": "Source:",
+    "detectedObjects": "Detected Objects ({count}):",
+    "riskAlerts": "Risk Alerts ({count}):",
+    "riskDetected": "Risk Detected",
+    "detectionComplete": "Detection Complete"
+  },
+  "risk": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium"
+  },
+  "stats": {
+    "inferenceLatency": "Inference Latency:",
+    "detectionCount": "Detection Count:",
+    "riskAlerts": "Risk Alerts:"
+  },
+  "message": {
+    "uploadImageFile": "Please upload an image file",
+    "fileTooLarge": "File size cannot exceed 20MB",
+    "imageLoaded": "Image loaded, click \"Start Detection\" to analyze",
+    "cameraStopped": "Camera stopped",
+    "cameraConnected": "Camera connected successfully",
+    "cameraReady": "Camera connection ready",
+    "cameraError": "Camera error: {msg}",
+    "cameraFailed": "Camera connection failed, please check backend service",
+    "cameraDisconnected": "Camera connection lost",
+    "cameraTimeout": "Camera connection timeout (15s)",
+    "cameraStartFailed": "Failed to start camera: {error}",
+    "detectionFailed": "Detection failed: {error}",
+    "selectImageFirst": "Please select an image file first",
+    "detectionComplete": "Image detection complete",
+    "detectionError": "Detection failed: {msg}",
+    "resultCleared": "Detection result cleared",
+    "logsCleared": "Detection logs cleared"
+  },
+  "classLabel": {
+    "person": "Person",
+    "helmet": "Helmet",
+    "no_helmet": "No Helmet",
+    "vest": "Vest",
+    "no_vest": "No Vest",
+    "none": "No Protection",
+    "gloves": "Gloves",
+    "no_gloves": "No Gloves",
+    "boots": "Boots",
+    "no_boots": "No Boots",
+    "goggles": "Goggles",
+    "no_goggle": "No Goggles"
+  },
+  "lang": {
+    "switch": "中文"
+  }
+}

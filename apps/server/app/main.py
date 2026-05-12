@@ -1,6 +1,6 @@
 """
-SiteGuard AI Server - FastAPI 主应用
-工地安全风险监测系统后端
+SiteGuard AI Server - FastAPI
+Construction site safety monitoring system backend
 """
 
 import sys
@@ -15,82 +15,82 @@ import uvicorn
 from .core.config import settings, validate_paths
 from .utils.logger import setup_logger
 
-# 添加当前app目录到Python路径，解决模块导入问题
+# Add current app directory to Python path for module imports
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
-# 添加ai-engine包到Python路径
+# Add ai-engine package to Python path
 project_root = Path(__file__).parent.parent.parent.parent
 ai_engine_path = project_root / "packages" / "ai-engine"
 sys.path.insert(0, str(ai_engine_path))
 
 from .routes import detection, models, camera
 
-# 导入AI引擎模块
+# Import AI engine module
 from ai_engine.model.model_manager import ModelManager
 from .services.detection_service import DetectionService
 
-# 设置日志
+# Set up logging
 logger = setup_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    应用生命周期管理
+    Application lifecycle management
     """
-    # 启动时初始化
-    logger.info("SiteGuard AI Server 正在启动...")
+    # Initialize on startup
+    logger.info("SiteGuard AI Server is starting...")
 
-    # 验证关键路径
+    # Validate critical paths
     success, problems = validate_paths()
     if not success:
-        logger.warning("⚠️ 路径配置验证发现问题:")
+        logger.warning("Path configuration validation issues found:")
         for problem in problems:
             logger.warning(f"  - {problem}")
-        logger.warning("应用将继续启动，但某些功能可能无法正常工作")
+        logger.warning("Application will continue, but some features may not work")
     else:
-        logger.info("✅ 所有路径配置验证通过")
+        logger.info("All path configuration validated successfully")
 
-    # 初始化模型管理器
+    # Initialize model manager
     app.state.model_manager = ModelManager(settings.MODELS_DIR)
     app.state.model_manager.initialize()
-    # 加载默认模型
+    # Load default model
     try:
         app.state.model_manager.load_model(settings.DEFAULT_MODEL)
-        logger.info(f"✅ 默认模型加载成功: {settings.DEFAULT_MODEL}")
+        logger.info(f"Default model loaded successfully: {settings.DEFAULT_MODEL}")
     except Exception as e:
-        logger.error(f"❌ 默认模型加载失败: {e}")
-        # 如果模型不存在，可能使用第一个可用模型
+        logger.error(f"Default model failed to load: {e}")
+        # If model doesn't exist, try first available model
         model_list = app.state.model_manager.get_model_list()
         if model_list:
             first_model = model_list[0]['name']
             app.state.model_manager.load_model(first_model)
-            logger.info(f"✅ 备用模型加载成功: {first_model}")
+            logger.info(f"Fallback model loaded successfully: {first_model}")
         else:
-            logger.warning("⚠️ 没有找到任何模型文件，检测功能将不可用")
+            logger.warning("No model files found, detection will be unavailable")
 
-    # 初始化检测服务
+    # Initialize detection service
     app.state.detection_service = DetectionService(app.state.model_manager)
 
-    logger.info(f"模型目录: {settings.MODELS_DIR}")
-    logger.info(f"API 文档: http://{settings.HOST}:{settings.PORT}/docs")
+    logger.info(f"Model directory: {settings.MODELS_DIR}")
+    logger.info(f"API docs: http://{settings.HOST}:{settings.PORT}/docs")
 
     yield
 
-    # 关闭时清理
-    logger.info("SiteGuard AI Server 正在关闭...")
+    # Clean up on shutdown
+    logger.info("SiteGuard AI Server is shutting down...")
     app.state.model_manager.cleanup()
-    # DetectionService不需要特殊清理
+    # DetectionService doesn't need special cleanup
 
-# 创建FastAPI应用
+# Create FastAPI application
 app = FastAPI(
     title="SiteGuard AI API",
-    description="工地安全风险监测系统后端API",
+    description="Construction Site Safety Monitoring System Backend API",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# 配置CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -99,19 +99,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载静态文件目录
+# Mount static files directory
 settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
 settings.STATIC_DIR.joinpath("temp").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(settings.STATIC_DIR)), name="static")
 
-# 注册路由
-app.include_router(detection.router, prefix="/api/v1/detection", tags=["检测"])
-app.include_router(models.router, prefix="/api/v1/models", tags=["模型管理"])
-app.include_router(camera.router, prefix="/api/v1/camera", tags=["摄像头"])
+# Register routes
+app.include_router(detection.router, prefix="/api/v1/detection", tags=["Detection"])
+app.include_router(models.router, prefix="/api/v1/models", tags=["Models"])
+app.include_router(camera.router, prefix="/api/v1/camera", tags=["Camera"])
 
 @app.get("/")
 async def root():
-    """根端点"""
+    """Root endpoint"""
     return {
         "message": "SiteGuard Server",
         "version": "1.0.0",
@@ -125,18 +125,18 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """健康检查"""
+    """Health check"""
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 if __name__ == "__main__":
-    # 根据运行方式动态选择模块名
-    # 如果在app目录下直接运行python main.py，使用"__main__"
-    # 如果在server目录下运行python -m app.main，使用"app.main"
-    # 如果在项目根目录运行python -m apps.server.app.main，使用"apps.server.app.main"
+    # Dynamically select module name based on run mode
+    # Running python main.py directly: use "__main__"
+    # Running python -m app.main from server dir: use "app.main"
+    # Running python -m apps.server.app.main from root: use "apps.server.app.main"
     if __package__ is None:
         module_name = "__main__"
     else:
-        # 构建完整模块路径
+        # Build full module path
         module_name = __package__ + ".main"
     uvicorn.run(
         f"{module_name}:app",

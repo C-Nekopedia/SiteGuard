@@ -1,6 +1,6 @@
 """
 SiteGuard AI Engine
-YOLO26封装和推理引擎
+YOLO26 wrapper and inference engine
 """
 
 __version__ = "1.0.0"

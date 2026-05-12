@@ -1,12 +1,12 @@
 """
-AI Engine包 - YOLO26封装
+AI Engine package - YOLO26 wrapper
 """
 from setuptools import setup, find_packages
 
 setup(
     name="ai-engine",
     version="1.0.0",
-    description="SiteGuard AI Engine - YOLO26封装和推理引擎",
+    description="SiteGuard AI Engine - YOLO26 wrapper and inference engine",
     author="SiteGuard Team",
     packages=find_packages(),
     install_requires=[
